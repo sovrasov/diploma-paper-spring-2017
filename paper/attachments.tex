@@ -1,0 +1,1069 @@
+\section{Приложения}
+\subsection{Приложение 1}
+\label{attach1}
+
+\begin{lstlisting}[frame=single]
+#ifndef OPTIMIZER_ALGORITHM_UNCONSTRAINED_HPP
+#define OPTIMIZER_ALGORITHM_UNCONSTRAINED_HPP
+
+#include "OptimizerCoreGlobal.hpp"
+#include "OptimizerTask.hpp"
+#include "OptimizerSolution.hpp"
+#include "OptimizerFunction.hpp"
+#include "OptimizerDataStructures.hpp"
+#include "OptimizerSolution.hpp"
+#include "OptimizerResult.hpp"
+#include "OptimizerSearchSequence.hpp"
+
+#include <set>
+
+namespace optimizercore
+{
+
+  class EXPORT_API OptimizerAlgorithmUnconstrained final
+  {
+
+  private:
+
+    bool mLocalMixType;
+    bool mIsAlgorithmMemoryAllocated;
+    bool mIsParamsInitialized;
+    bool mIsTaskInitialized;
+    bool mNeedLocalVerification;
+
+    int mNumberOfThreads;
+    int mLocalStartIterationNumber;
+    int mMaxNumberOfIterations;
+    int mMapTightness;
+    int mMethodDimension;
+    int mAlpha;
+    int mLocalMixParameter;
+    int mMapType;
+
+    OptimizerSpaceTransformation mSpaceTransform;
+    OptimizerFunction *mTargetFunction;
+    OptimizerFunctionPtr mTargetFunctionSmartPtr;
+
+    OptimizerInterval *mIntervalsForTrials;
+    std::set<OptimizerTrialPoint> mSearchInformationStorage;
+    OptimizerTrialPoint mOptimumEvaluation, *mNextTrialsPoints;
+
+    LocalTuningMode mLocalTuningMode;
+
+    double mGlobalM, mZ, eps, r, mMaxIntervalNorm;
+    double **mNextPoints;
+
+    void AllocMem();
+    void InitializeInformationStorage();
+    void UpdateGlobalM(std::set<OptimizerTrialPoint>::iterator&);
+    int UpdateRanks(bool isLocal);
+    bool InsertNewTrials(int trailsNumber);
+    OptimizerSolution DoLocalVerification(OptimizerSolution startPoint);
+
+  public:
+    OptimizerAlgorithmUnconstrained();
+    ~OptimizerAlgorithmUnconstrained();
+
+    void SetTask(OptimizerFunctionPtr function,
+      OptimizerSpaceTransformation spaceTransform);
+    void SetThreadsNum(int num);
+    void SetParameters(OptimizerParameters params);
+
+    OptimizerResult StartOptimization(const double* xOpt,
+      StopCriterionType stopType);
+
+    double GetLipschitzConst() const;
+    OptimizerSearchSequence GetSearchSequence() const;
+
+  };
+}
+#endif
+\end{lstlisting}
+\begin{lstlisting}[frame=single]
+  #include "OptimizerAlgorithmUnconstrained.hpp"
+  #include "HookeJeevesLocalMethod.hpp"
+
+  #include <cassert>
+  #include <algorithm>
+
+  using namespace optimizercore;
+  using namespace optimizercore::utils;
+
+  OptimizerAlgorithmUnconstrained::OptimizerAlgorithmUnconstrained()
+  {
+    mIsAlgorithmMemoryAllocated = false;
+
+    mLocalStartIterationNumber = 1;
+    mNumberOfThreads = 1;
+    mMaxNumberOfIterations = 5000;
+    mNextPoints = nullptr;
+    mNextTrialsPoints = nullptr;
+    mIntervalsForTrials = nullptr;
+    r = 2;
+    mLocalTuningMode = LocalTuningMode::None;
+
+    mIsTaskInitialized = false;
+    mIsParamsInitialized = false;
+  }
+
+  void OptimizerAlgorithmUnconstrained::SetTask(OptimizerFunctionPtr function,
+    OptimizerSpaceTransformation spaceTransform)
+  {
+    assert(function);
+
+    mTargetFunctionSmartPtr = function;
+    mTargetFunction = function.get();
+    mSpaceTransform = spaceTransform;
+
+    mIsTaskInitialized = true;
+  }
+
+  OptimizerSearchSequence OptimizerAlgorithmUnconstrained::GetSearchSequence() const
+  {
+    return OptimizerSearchSequence(mSearchInformationStorage, mMethodDimension,
+      static_cast<MapType> (mMapType), mMapTightness, mSpaceTransform);
+  }
+
+  double OptimizerAlgorithmUnconstrained::GetLipschitzConst() const
+  {
+    return mGlobalM;
+  }
+
+  void OptimizerAlgorithmUnconstrained::SetParameters(OptimizerParameters params)
+  {
+    assert(params.algDimention);
+    assert(params.eps > 0);
+    assert(params.localAlgStartIterationNumber > 0);
+    assert(params.mapTightness > 5 && params.mapTightness <= 20);
+    assert(params.maxIterationsNumber > 0);
+    assert(params.localMixParameter >= 0 && params.localMixParameter <= 20);
+    assert(params.r != nullptr);
+    assert(params.numberOfThreads > 0);
+    assert(params.reserves != nullptr);
+    assert(params.numberOfMaps > 0);
+
+    mLocalStartIterationNumber = params.localAlgStartIterationNumber;
+    eps = params.eps;
+    if (params.localMixParameter <= 10)	{
+      mLocalMixParameter = params.localMixParameter;
+      mLocalMixType = true;
+    }
+    else	{
+      mLocalMixParameter = 20 - params.localMixParameter;
+      mLocalMixType = false;
+    }
+    mNeedLocalVerification = params.localVerification;
+    mAlpha = params.localExponent;
+    mMethodDimension = params.algDimention;
+    mMapTightness = params.mapTightness;
+    mMapType = static_cast<int>(params.mapType);
+    mMaxNumberOfIterations = params.maxIterationsNumber;
+    mLocalTuningMode = params.localTuningMode;
+    r = *params.r;
+    if (mNextPoints)
+      utils::DeleteMatrix(mNextPoints, mNumberOfThreads);
+    mNextPoints = utils::AllocateMatrix<double>(mNumberOfThreads, mMethodDimension);
+    this->SetThreadsNum(params.numberOfThreads);
+
+    mIsParamsInitialized = true;
+  }
+
+  void OptimizerAlgorithmUnconstrained::InitializeInformationStorage()
+  {
+    if (!mIsAlgorithmMemoryAllocated){
+      AllocMem();
+      mIsAlgorithmMemoryAllocated = true;
+    }
+
+    mZ = HUGE_VAL;
+    mGlobalM = 1;
+    mMaxIntervalNorm = 0;
+
+    mSearchInformationStorage.clear();
+
+    mapd(0.0, mMapTightness, mNextPoints[0], mMethodDimension, mMapType);
+    mSpaceTransform.Transform(mNextPoints[0], mNextPoints[0]);
+    mSearchInformationStorage.emplace(0.0, mTargetFunction->Calculate(mNextPoints[0]), 0);
+
+    mapd(1.0, mMapTightness, mNextPoints[0], mMethodDimension, mMapType);
+    mSpaceTransform.Transform(mNextPoints[0], mNextPoints[0]);
+    mSearchInformationStorage.emplace(1.0, mTargetFunction->Calculate(mNextPoints[0]), 0);
+  }
+
+  bool OptimizerAlgorithmUnconstrained::InsertNewTrials(int trailsNumber)
+  {
+    bool storageInsertionError;
+    if (mMapType == 3)
+    {
+      int preimagesNumber = 0;
+      double preimages[32];
+      for (int i = 0; i < trailsNumber; i++)
+      {
+        invmad(mMapTightness, preimages, 32,
+          &preimagesNumber, mNextPoints[i], mMethodDimension, 4);
+        for (int k = 0; k < preimagesNumber; k++)
+        {
+          mNextTrialsPoints[i].x = preimages[k];
+          auto insertionResult =
+            mSearchInformationStorage.insert(mNextTrialsPoints[i]);
+
+          if (!(storageInsertionError = insertionResult.second))
+            break;
+
+          UpdateGlobalM(insertionResult.first);
+        }
+      }
+    }
+    else
+      for (int i = 0; i < trailsNumber; i++)
+      {
+        auto insertionResult =
+          mSearchInformationStorage.insert(mNextTrialsPoints[i]);
+
+        if (!(storageInsertionError = insertionResult.second))
+          break;
+
+        UpdateGlobalM(insertionResult.first);
+      }
+    return storageInsertionError;
+  }
+
+  OptimizerResult OptimizerAlgorithmUnconstrained::StartOptimization(
+    const double* a, StopCriterionType stopType)
+  {
+    assert(mIsParamsInitialized && mIsTaskInitialized);
+    assert(mSpaceTransform.GetDomainDimension() == mMethodDimension);
+
+    InitializeInformationStorage();
+
+    double *y;
+    bool stop = false;
+    int iterationsCount = 0,
+      currentThrNum = 1, ranksUpdateErrCode;
+
+    mNextTrialsPoints[0].x = 0.5;
+    mapd(mNextTrialsPoints[0].x, mMapTightness, mNextPoints[0],
+      mMethodDimension, mMapType);
+    mSpaceTransform.Transform(mNextPoints[0], mNextPoints[0]);
+
+    while (iterationsCount < mMaxNumberOfIterations && !stop)	{
+      iterationsCount++;
+
+  #pragma omp parallel for num_threads(currentThrNum)
+      for (int i = 0; i < currentThrNum; i++)	{
+        mNextTrialsPoints[i].val = mTargetFunction->Calculate(mNextPoints[i]);
+        if (mMapType == 3)
+          mSpaceTransform.InvertTransform(mNextPoints[i], mNextPoints[i]);
+  #pragma omp critical
+        if (mNextTrialsPoints[i].val < mZ)
+          mZ = mNextTrialsPoints[i].val;
+      }
+
+      if (!InsertNewTrials(currentThrNum))
+        break;
+
+      if (iterationsCount >= mLocalStartIterationNumber)	{
+        if (iterationsCount % (12 - mLocalMixParameter) == 0
+          && mLocalMixParameter > 0)
+          ranksUpdateErrCode = UpdateRanks(mLocalMixType);
+        else
+          ranksUpdateErrCode = UpdateRanks(!mLocalMixType);
+      }
+      else
+        ranksUpdateErrCode = UpdateRanks(false);
+
+      if (iterationsCount >= mNumberOfThreads + 10)
+        currentThrNum = mNumberOfThreads;
+
+      for (int i = 0; i < currentThrNum && !stop; i++)	{
+        OptimizerTrialPoint left = mIntervalsForTrials[i].left;
+        OptimizerTrialPoint right = mIntervalsForTrials[i].right;
+
+        mNextTrialsPoints[i].x = (left.x + right.x) / 2
+          - sgn(right.val - left.val)*pow(fabs(right.val - left.val)
+          / mIntervalsForTrials[i].localM, mMethodDimension) / (2 * r);
+
+        mapd(mNextTrialsPoints[i].x, mMapTightness, mNextPoints[i],
+          mMethodDimension, mMapType);
+        mSpaceTransform.Transform(mNextPoints[i], mNextPoints[i]);
+
+        y = mNextPoints[i];
+
+        if (stopType == StopCriterionType::OptimalPoint)	{
+          if (NormNDimMax(y, a, mMethodDimension) < eps)	{
+            stop = true;
+            mOptimumEvaluation = mNextTrialsPoints[i];
+          }
+        }
+        else	{
+          if (pow(right.x - left.x, 1.0 / mMethodDimension) < eps)	{
+            stop = true;
+            mOptimumEvaluation = mNextTrialsPoints[i];
+          }
+        }
+      }
+    }
+
+    mOptimumEvaluation.val = mTargetFunction->Calculate(y);
+    mSearchInformationStorage.insert(mOptimumEvaluation);
+
+    if (stopType == StopCriterionType::Precision)
+      mOptimumEvaluation = *std::min_element(mSearchInformationStorage.begin(),
+        mSearchInformationStorage.cend(),
+        [](OptimizerTrialPoint p1, OptimizerTrialPoint p2)
+      {
+        return p1.val < p2.val;
+      });
+
+    mapd(mOptimumEvaluation.x, mMapTightness, y, mMethodDimension, mMapType);
+    mSpaceTransform.Transform(y, y);
+
+    SharedVector optPoint(new double[mMethodDimension], array_deleter<double>());
+    std::memcpy(optPoint.get(), y, mMethodDimension*sizeof(double));
+
+    OptimizerSolution solution(iterationsCount, mOptimumEvaluation.val,
+      mOptimumEvaluation.x, mMethodDimension, optPoint);
+
+    if (mNeedLocalVerification)
+      return OptimizerResult(DoLocalVerification(solution));
+    else
+      return OptimizerResult(solution);
+  }
+  OptimizerSolution OptimizerAlgorithmUnconstrained::DoLocalVerification(OptimizerSolution startSolution)
+  {
+    OptimizerFunctionPtr *functions = new OptimizerFunctionPtr[1];
+    functions[0] = mTargetFunctionSmartPtr;
+
+    OptimizerTask localTask(std::shared_ptr<OptimizerFunctionPtr>(functions,
+      utils::array_deleter<OptimizerFunctionPtr>()),
+      0, mMethodDimension, mSpaceTransform.GetLeftDomainBound(),
+      mSpaceTransform.GetRightDomainBound());
+
+    localoptimizer::HookeJeevesLocalMethod localMethod;
+    localMethod.SetEps(eps / 100);
+    localMethod.SetInitialStep(2 * eps);
+    localMethod.SetProblem(localTask);
+    localMethod.SetStepMultiplier(2);
+    localMethod.SetStartPoint(startSolution.GetOptimumPoint().get(),
+      localTask.GetTaskDimension());
+
+    SharedVector localOptimum(new double[mMethodDimension], array_deleter<double>());
+    localMethod.StartOptimization(localOptimum.get());
+    double bestLocalValue = mTargetFunction->Calculate(localOptimum.get());
+
+    if (startSolution.GetOptimumValue() > bestLocalValue)
+      return OptimizerSolution(startSolution.GetIterationsCount(),
+      bestLocalValue, 0.5, mMethodDimension, localOptimum);
+
+    return startSolution;
+  }
+  void OptimizerAlgorithmUnconstrained::SetThreadsNum(int num)
+  {
+    if (num > 0 && num < 100)
+    {
+      if (mNextPoints != nullptr)
+        utils::DeleteMatrix(mNextPoints, mNumberOfThreads);
+      mNumberOfThreads = num;
+      if (mNextTrialsPoints)
+        delete[] mNextTrialsPoints;
+      if (mIntervalsForTrials)
+        delete[] mIntervalsForTrials;
+      mIntervalsForTrials = new OptimizerInterval[num];
+      mNextTrialsPoints = new OptimizerTrialPoint[num];
+      mNextPoints = utils::AllocateMatrix<double>(
+        mNumberOfThreads, mMethodDimension);
+    }
+  }
+  OptimizerAlgorithmUnconstrained::~OptimizerAlgorithmUnconstrained()
+  {
+    if (mIntervalsForTrials)
+      delete[] mIntervalsForTrials;
+    if (mNextPoints)
+      utils::DeleteMatrix(mNextPoints, mNumberOfThreads);
+    if (mNextTrialsPoints)
+      delete[] mNextTrialsPoints;
+    if (mIsAlgorithmMemoryAllocated)
+    {
+    }
+  }
+  void OptimizerAlgorithmUnconstrained::UpdateGlobalM(
+    std::set<OptimizerTrialPoint>::iterator& newPointIt)
+  {
+    double max = mGlobalM;
+    if (max == 1) max = 0;
+
+
+    auto leftPointIt = newPointIt;
+    auto rightPointIt = newPointIt;
+    --leftPointIt;
+    ++rightPointIt;
+
+    double leftIntervalNorm = pow(newPointIt->x - leftPointIt->x, 1.0 / mMethodDimension);
+    double rightIntervalNorm = pow(rightPointIt->x - newPointIt->x, 1.0 / mMethodDimension);
+
+
+    max = fmax(fmax(fabs(newPointIt->val - leftPointIt->val) / leftIntervalNorm,
+      fabs(rightPointIt->val - newPointIt->val) /	rightIntervalNorm), max);
+
+
+    mMaxIntervalNorm = 0;
+    auto currentPointIt = mSearchInformationStorage.begin();
+    auto nextPointIt = currentPointIt;
+    ++nextPointIt;
+
+    while (nextPointIt != mSearchInformationStorage.cend())
+    {
+      if (mLocalTuningMode != LocalTuningMode::None)
+        mMaxIntervalNorm = fmax(
+          pow(nextPointIt->x - currentPointIt->x, 1.0 / mMethodDimension),
+          mMaxIntervalNorm);
+
+      ++currentPointIt;
+      ++nextPointIt;
+    }
+    if (max != 0)
+      mGlobalM = max;
+    else
+      mGlobalM = 1;
+  }
+  int OptimizerAlgorithmUnconstrained::UpdateRanks(bool isLocal)
+  {
+    double dx, curr_rank, mu1 = -HUGE_VAL, localM = mGlobalM;
+    double localMConsts[3];
+
+    for (int i = 0; i < mNumberOfThreads; i++)
+      mIntervalsForTrials[i].R = -HUGE_VAL;
+
+    auto leftIt = mSearchInformationStorage.begin();
+    auto rightIt = mSearchInformationStorage.begin();
+    ++rightIt;
+
+    int storageSize = mSearchInformationStorage.size();
+
+    for (int j = 0; j < storageSize - 1; j++)
+    {
+      dx = pow(rightIt->x - leftIt->x, 1.0 / mMethodDimension);
+
+      if (dx == 0)
+        return 1;
+
+      if (mLocalTuningMode != LocalTuningMode::None)	{
+        std::set<OptimizerTrialPoint>::iterator rightRightIt = rightIt;
+
+        if (j > 0 && j < storageSize - 2)	{
+          ++rightRightIt;
+
+          std::swap(localMConsts[0], localMConsts[1]);
+          std::swap(localMConsts[1], localMConsts[2]);
+
+          localMConsts[2] = fabs(rightRightIt->val - rightIt->val)
+            / pow(rightRightIt->x - rightIt->x, 1.0 / mMethodDimension);
+
+          mu1 = fmax(fmax(localMConsts[0], localMConsts[1]), localMConsts[2]);
+        }
+        else if (j == 0)	{
+          ++rightRightIt;
+
+          localMConsts[1] = fabs(rightIt->val - leftIt->val) / dx;
+          localMConsts[2] = fabs(rightRightIt->val - rightIt->val) /
+            pow(rightRightIt->x - rightIt->x, 1.0 / mMethodDimension);
+          mu1 = fmax(localMConsts[1], localMConsts[2]);
+        }
+        else
+          mu1 = fmax(localMConsts[1], localMConsts[2]);
+
+        double mu2 = mGlobalM*dx / mMaxIntervalNorm;
+
+        if (mLocalTuningMode == LocalTuningMode::Maximum)	{
+          localM = fmax(fmax(mu1, mu2), 0.01);
+        }
+        else// LocalTuningMode::Adaptive
+          localM = fmax(mu1 / r + (1 - 1 / r)*mGlobalM, 0.01);
+          //localM = fmax(mu1*(1 - dx / mMaxIntervalNorm) + mu2, 0.01);
+          //localM = fmax(mu1*mMConvolution + (1 - mMConvolution)*mu2, 0.01);
+      }
+
+      curr_rank = dx + Pow2((rightIt->val - leftIt->val) / (r * localM)) / dx
+        - 2 * (rightIt->val + leftIt->val - 2 * mZ) / (r * localM);
+      if (isLocal)
+        curr_rank /= sqrt((rightIt->val - mZ)*
+        (leftIt->val - mZ)) / localM + pow(1.5, -mAlpha);
+
+      if (curr_rank > mIntervalsForTrials[mNumberOfThreads - 1].R)
+      {
+        OptimizerInterval newInterval(
+          OptimizerTrialPoint(*leftIt),
+          OptimizerTrialPoint(*rightIt), curr_rank, localM);
+        for (int i = 0; i < mNumberOfThreads; i++)
+          if (mIntervalsForTrials[i].R < newInterval.R)
+            std::swap(mIntervalsForTrials[i], newInterval);
+      }
+      ++leftIt;
+      ++rightIt;
+    }
+    return 0;
+  }
+  void OptimizerAlgorithmUnconstrained::AllocMem()
+  {
+  }
+\end{lstlisting}
+
+\subsection{Приложение 2}
+\label{attach2}
+\begin{lstlisting}[frame=single]
+#ifndef __OPTMAL_CONTROL_PROBLEM_H__
+#define __OPTMAL_CONTROL_PROBLEM_H__
+
+#include "problem_interface.h"
+#include "optimal_problem_base.h"
+
+#include <Eigen/Dense>
+#include <string>
+
+class TOptimalControlProblem : public IProblem
+{
+protected:
+
+  OptimalControlProblemBase* mPProblemImpl;
+  int mDimension;
+  bool mIsInitialized;
+  std::string mConfigPath;
+
+public:
+  TOptimalControlProblem();
+  virtual int SetConfigPath(const std::string& configPath);
+  virtual int SetDimension(int dimension);
+  virtual int GetDimension() const;
+  virtual int Initialize();
+
+  virtual void GetBounds(double* lower, double *upper);
+  virtual int GetOptimumValue(double& value) const;
+  virtual int GetOptimumPoint(double* x) const;
+
+  virtual int GetNumberOfFunctions() const;
+  virtual int GetNumberOfConstraints() const;
+  virtual int GetNumberOfCriterions() const;
+
+  virtual double CalculateFunctionals(const double* x, int fNumber);
+
+  ~TOptimalControlProblem();
+};
+
+extern "C" LIB_EXPORT_API IProblem* create();
+extern "C" LIB_EXPORT_API void destroy(IProblem* ptr);
+#endif
+\end{lstlisting}
+\begin{lstlisting}[frame=single]
+#include "optimalControl.h"
+#include "test_problems.h"
+#include "problemA.h"
+#include "problemB.h"
+#include "pugixml.hpp"
+
+#include <string>
+#include <stdexcept>
+
+TOptimalControlProblem::TOptimalControlProblem()
+{
+  mIsInitialized = false;
+}
+
+int TOptimalControlProblem::SetConfigPath(const std::string& configPath)
+{
+  mConfigPath = std::string(configPath);
+  return IProblem::OK;
+}
+
+int TOptimalControlProblem::SetDimension(int dimension)
+{
+    return IProblem::OK;
+}
+
+int TOptimalControlProblem::GetDimension() const
+{
+  return mDimension;
+}
+
+int TOptimalControlProblem::Initialize()
+{
+  if (mIsInitialized == false)
+  {
+    mIsInitialized = true;
+
+    pugi::xml_document doc;
+    pugi::xml_parse_result result = doc.load_file(mConfigPath.c_str());
+    if (result.status != pugi::status_ok)
+      return IProblem::ERROR;
+
+    pugi::xml_node config = doc.child("config");
+    std::string problemName = config.child("problem_name").child_value();
+    double secondCriterionLevel = 0.;
+    double lambda = 0.;
+    int dimension = 0;
+    try  {
+      secondCriterionLevel = std::stod(config.child("S").child_value());
+      lambda = std::stod(config.child("lambda").child_value());
+      dimension = std::stoi(config.child("N").child_value());
+    }
+    catch (std::invalid_argument& exp)  {
+      return IProblem::ERROR;
+    }
+
+    if (problemName == std::string("v"))
+      mPProblemImpl = new VibroisolationProblem();
+    else if (problemName == std::string("od"))
+      mPProblemImpl = new OscillationDampingProblem();
+    else if (problemName == std::string("a2d"))
+      mPProblemImpl = new ProblemA2d(secondCriterionLevel);
+    else if (problemName == std::string("a3d"))
+      mPProblemImpl = new ProblemA3d(secondCriterionLevel);
+    else if (problemName == std::string("bNd") && dimension == 2)
+      mPProblemImpl = new ProblemB2d(secondCriterionLevel);
+    else if (problemName == std::string("bNd"))
+      mPProblemImpl = new ProblemB(secondCriterionLevel, dimension);
+    else if (problemName == std::string("bNdC"))
+      mPProblemImpl = new ProblemBConvolved(lambda, dimension);
+    else
+      return IProblem::ERROR;
+
+    mDimension = mPProblemImpl->GetDimension();
+
+    return IProblem::OK;
+  }
+  else
+    return IProblem::ERROR;
+}
+
+void TOptimalControlProblem::GetBounds(double* lower, double *upper)
+{
+  if (mIsInitialized)
+    mPProblemImpl->GetBounds(lower, upper);
+}
+
+int TOptimalControlProblem::GetOptimumValue(double& value) const
+{
+  return IProblem::UNDEFINED;
+}
+
+int TOptimalControlProblem::GetOptimumPoint(double* point) const
+{
+  return IProblem::UNDEFINED;
+}
+
+int TOptimalControlProblem::GetNumberOfFunctions() const
+{
+  return mPProblemImpl->GetNumberOfFunctions();
+}
+
+int TOptimalControlProblem::GetNumberOfConstraints() const
+{
+  return mPProblemImpl->GetNumberOfConstraints();
+}
+
+int TOptimalControlProblem::GetNumberOfCriterions() const
+{
+  return 1;
+}
+
+// ------------------------------------------------------------------------------------------------
+double TOptimalControlProblem::CalculateFunctionals(const double* x, int fNumber)
+{
+  return mPProblemImpl->CalculateFunctionals(x, fNumber);
+}
+
+TOptimalControlProblem::~TOptimalControlProblem()
+{
+  if(mIsInitialized)
+  {
+    mPProblemImpl->PrintFinalMessage();
+    delete mPProblemImpl;
+  }
+}
+
+LIB_EXPORT_API IProblem* create()
+{
+  return new TOptimalControlProblem();
+}
+
+LIB_EXPORT_API void destroy(IProblem* ptr)
+{
+  delete ptr;
+}
+\end{lstlisting}
+\begin{lstlisting}[frame=single]
+#ifndef OPTIMAL_CONTROL_BASE_H
+#define OPTIMAL_CONTROL_BASE_H
+
+#ifndef EIGEN_DONT_PARALLELIZE
+#define EIGEN_DONT_PARALLELIZE
+#endif
+
+#include <Eigen/Dense>
+#include <vector>
+
+class OptimalControlProblemBase
+{
+protected:
+  int mDimension;
+  int n_x;
+  int n_v;
+  int n_u;
+  std::vector<int> n_k;
+
+  Eigen::MatrixXd A;
+  Eigen::MatrixXd B_u;
+  Eigen::MatrixXd B_v;
+  Eigen::MatrixXd* YVecs;
+  std::vector<Eigen::MatrixXd> CMatrices;
+  std::vector<Eigen::MatrixXd> DMatrices;
+
+  double mZeroConstraintOffset;
+  double mS;
+
+  virtual Eigen::RowVectorXd getTheta(const double* x);
+  virtual double CalculateCriterionValue(const Eigen::RowVectorXd& theta, int fNumber);
+
+public:
+  OptimalControlProblemBase();
+  virtual ~OptimalControlProblemBase();
+  virtual void GetBounds(double* lower, double *upper) const = 0;
+  virtual double CalculateFunctionals(const double* x, int fNumber);
+  int GetDimension() const { return mDimension; }
+  virtual int GetNumberOfConstraints() const { return 2; }
+  virtual int GetNumberOfFunctions() const { return 3; }
+  virtual void PrintFinalMessage() {}
+};
+
+#endif
+\end{lstlisting}
+\begin{lstlisting}[frame=single]
+#include "optimal_problem_base.h"
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <algorithm>
+#include <omp.h>
+
+using namespace Eigen;
+
+OptimalControlProblemBase::OptimalControlProblemBase()
+{
+  YVecs = new MatrixXd[omp_get_num_procs()];
+}
+
+OptimalControlProblemBase::~OptimalControlProblemBase()
+{
+  delete[] YVecs;
+}
+
+RowVectorXd OptimalControlProblemBase::getTheta(const double* x)
+{
+  return Map<const RowVectorXd>(x, mDimension);
+}
+
+MatrixXd buildVectorizationMatrix(const MatrixXd& A)
+{
+  size_t n = A.cols();
+
+  MatrixXd E = MatrixXd::Identity(n, n);
+  MatrixXd S(n*n, n*n);
+
+  for(size_t i = 0; i < n; i++)
+    for(size_t j = 0; j < n; j++)
+    {
+      if(i != j)
+        S.block(i*n, j*n, n, n) = A.coeff(i, j)*E;
+      else
+        S.block(i*n, j*n, n, n) = A + A.coeff(i, j)*E;
+    }
+
+  return S;
+}
+
+double OptimalControlProblemBase::CalculateCriterionValue(const Eigen::RowVectorXd& theta, int fNumber)
+{
+  Map<MatrixXd> Y(YVecs[omp_get_thread_num()].data(), A.cols(), A.rows());
+
+  double value = -HUGE_VAL;
+  size_t cRows = CMatrices[fNumber].rows();
+  for (size_t i = 0; i < cRows; i++)
+  {
+    RowVectorXd currentVector = CMatrices[fNumber].row(i) + DMatrices[fNumber].row(i)*theta;
+    double dotProd = (currentVector*Y).dot(currentVector.transpose());
+    value = std::max(value, dotProd);
+  }
+  return value;
+}
+
+double OptimalControlProblemBase::CalculateFunctionals(const double* x, int fNumber)
+{
+  RowVectorXd theta = getTheta(x);
+
+  if (fNumber == 0)
+  {
+    MatrixXd Atheta = A + B_u*theta;
+
+    EigenSolver<MatrixXd> eigenSolver(Atheta, false);
+    MatrixXcd eigenvalues = eigenSolver.eigenvalues();
+    double maxReal = -HUGE_VAL;
+    for (int i = 0; i < Atheta.cols(); i++)
+      maxReal = std::max(maxReal, eigenvalues.coeff(i).real());
+
+    return maxReal + mZeroConstraintOffset;
+  }
+  else if (fNumber == 1)
+  {
+    MatrixXd Atheta = A + B_u*theta;
+    MatrixXd S = buildVectorizationMatrix(Atheta);
+    MatrixXd rhs = -B_v*B_v.transpose();
+    Map<VectorXd> rhsMap(rhs.data(), rhs.size());
+    YVecs[omp_get_thread_num()] = S.partialPivLu().solve(rhsMap);
+  }
+
+  fNumber--;
+  double offset = fNumber == 0 ? -mS : 0.;
+  double value = CalculateCriterionValue(theta, fNumber);
+
+  return sqrt(value) + offset;
+}
+\end{lstlisting}
+\begin{lstlisting}[frame=single]
+#pragma once
+#include "optimal_problem_base.h"
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <algorithm>
+#include <iostream>
+
+using namespace Eigen;
+using Eigen::internal::BandMatrix;
+
+class ProblemB_Common : public OptimalControlProblemBase
+{
+public:
+  ProblemB_Common(double S)
+  {
+    double beta = 0.1;
+
+    int n = 10;
+
+    n_x = 2*n;
+    n_v = 1;
+    n_u = 1;
+    n_k.resize(2);
+    n_k[0] = n_k[1] = 1;
+
+    CMatrices.resize(2);
+    DMatrices.resize(2);
+
+    A.resize(n_x, n_x);
+    A.topLeftCorner(n, n).setZero();
+    A.topRightCorner(n, n).setIdentity();
+
+    BandMatrix<double> K(n, n, 1, 1);
+    K.diagonal().setConstant(2.);
+    K.diagonal(-1).setConstant(-1.);
+    K.diagonal(1).setConstant(-1.);
+    K.diagonal()(0) = 1.;
+    K.diagonal()(n - 1) = 1.;
+
+    A.bottomLeftCorner(n, n) = -K.toDenseMatrix();
+    A.bottomRightCorner(n, n) = -beta*K.toDenseMatrix();
+
+    B_v.resize(n_x, 1);
+    B_v.col(0).head(n).setZero();
+    B_v.col(0).tail(n).setOnes();
+
+    B_u = VectorXd::Zero(n_x);
+    B_u(n, 0) = 1.;
+
+    CMatrices[0].resize(1, n_x);
+    CMatrices[0].setZero();
+    CMatrices[0](0, 0) = 1.;
+
+    CMatrices[1].resize(n - 1, n_x);
+
+    for(size_t i = 0; i < n - 1; i++)
+    {
+      CMatrices[1].row(i).setZero();
+      CMatrices[1].row(i)(i) = -1.;
+      CMatrices[1].row(i)(i + 1) = 1.;
+    }
+
+    DMatrices[0].resize(1, 1); DMatrices[0] << 0;
+
+    DMatrices[1].resize(n - 1, 1);
+    DMatrices[1].setZero();
+
+    mS = S;
+    mZeroConstraintOffset = 0.;
+  }
+
+  int GetNumberOfConstraints() const { return 2; }
+};
+
+class ProblemB : public ProblemB_Common
+{
+public:
+  ProblemB(double S, int dimension) : ProblemB_Common(S)
+  {
+    mDimension = dimension;//shoud be > 2
+  }
+
+  void GetBounds(double* lower, double *upper) const
+  {
+    for (int i = 0; i < mDimension; i++)
+    {
+      lower[i] = -10000.;
+      upper[i] = -0.01;
+    }
+
+    for (int i = 2; i < mDimension; i++)
+    {
+      upper[i] = 10000.;
+    }
+  }
+
+  RowVectorXd getTheta(const double* x)
+  {
+    RowVectorXd theta(n_x);
+    theta.setZero();
+
+    theta(0) = x[0] - x[2];
+    for (int i = 1; i < mDimension - 2; i++)
+        theta(i) = x[i + 1] - x[i + 2];
+    theta(mDimension - 2) = x[mDimension - 1];
+    theta(n_x / 2) = x[1];
+
+    return theta;
+  }
+};
+
+class ProblemB2d : public ProblemB_Common
+{
+public:
+  ProblemB2d(double S) : ProblemB_Common(S)
+  {
+    mDimension = 2;
+  }
+
+  void GetBounds(double* lower, double *upper) const
+  {
+    for (int i = 0; i < mDimension; i++)
+    {
+      lower[i] = -70.;
+      upper[i] = -0.01;
+    }
+    lower[0] = -20.;
+  }
+
+  RowVectorXd getTheta(const double* x)
+  {
+    RowVectorXd theta(n_x);
+    theta.setZero();
+    theta(0) = x[0];
+    theta(n_x / 2) = x[1];
+
+    return theta;
+  }
+};
+\end{lstlisting}
+\begin{lstlisting}[frame=single]
+#ifndef __OPTMAL_CONTROL_TEST_IMPL_H__
+#define __OPTMAL_CONTROL_TEST_IMPL_H__
+
+#include "optimal_problem_base.h"
+
+class VibroisolationProblem : public OptimalControlProblemBase
+{
+public:
+  VibroisolationProblem()
+  {
+    n_x = 2;
+    n_v = 1;
+    n_u = 1;
+    n_k.resize(2);
+    n_k[0] = n_k[1] = 1;
+
+    CMatrices.resize(2);
+    DMatrices.resize(2);
+
+    A.resize(2, 2); A << 0, 1, 0, 0;
+    B_u.resize(2, 1); B_u << 0, 1;
+    B_v = B_u;
+
+    CMatrices[0].resize(1, 2); CMatrices[0] << 1, 0;
+    CMatrices[1].resize(1, 2); CMatrices[1] << 0, 0;
+
+    DMatrices[0].resize(1, 1); DMatrices[0] << 0;
+    DMatrices[1].resize(1, 1); DMatrices[1] << 1;
+    mDimension = n_x;
+    mZeroConstraintOffset = 0.;
+    mS = 1.;
+  }
+
+  int GetNumberOfConstraints() const { return 2; }
+
+  void GetBounds(double* lower, double *upper) const
+  {
+    for (int i = 0; i < mDimension; i++)
+    {
+      upper[i] = -0.2;
+      lower[i] = -2.0;
+    }
+  }
+};
+
+class OscillationDampingProblem : public OptimalControlProblemBase
+{
+public:
+  OscillationDampingProblem()
+  {
+    double beta = 0.1;
+    n_x = 4;
+    n_v = 1;
+    n_u = 1;
+    n_k.resize(2);
+    n_k[0] = n_k[1] = 1;
+
+    CMatrices.resize(2);
+    DMatrices.resize(2);
+
+    A.resize(4, 4);
+    A << 0, 0, 1, 0,
+      0, 0, 0, 1,
+      -2, 1, -2*beta, beta,
+      1, -1, beta, -beta;
+
+    B_u.resize(4, 1); B_u << 0, 0, 0, 1;
+    B_v.resize(4, 1); B_v << 0, 0, 1, 1;
+
+    CMatrices[0].resize(2, 4);
+    CMatrices[0] << 1, 0, 0, 0,
+      -1, 1, 0, 0;
+    CMatrices[1].resize(1, 4); CMatrices[1] << 0, 0, 0, 0;
+
+    DMatrices[0].resize(2, 1); DMatrices[0] << 0, 0;
+    DMatrices[1].resize(1, 1); DMatrices[1] << 1;
+    mDimension = n_x;
+    mZeroConstraintOffset = 0.02;
+    mS = 1.;
+  }
+
+  int GetNumberOfConstraints() const
+  {
+    return 2;
+  }
+
+  void GetBounds(double* lower, double *upper) const
+  {
+    for (int i = 0; i < mDimension; i++)
+    {
+      upper[i] = 1;
+      lower[i] = -2.0;
+    }
+  }
+};
+#endif
+\end{lstlisting}
