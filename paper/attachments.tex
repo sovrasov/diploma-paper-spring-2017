@@ -1067,3 +1067,519 @@ public:
 };
 #endif
 \end{lstlisting}
+
+\subsection{Приложение 3}
+\label{attach3}
+\begin{lstlisting}[frame=single]
+#ifndef __LOCALMETHOD_H__
+#define __LOCALMETHOD_H__
+
+#include "parameters.h"
+#include "task.h"
+#include "data.h"
+#include "common.h"
+#include <vector>
+
+#define MAX_LOCAL_TRIALS_NUMBER 10000
+
+class TLocalMethod
+{
+protected:
+
+  int mDimension;
+  int mConstraintsNumber;
+  int mTrialsCounter;
+  int mMaxTrial;
+
+  TTrial mBestPoint;
+  std::vector<TTrial> mSearchSequence;
+  TTask* mPTask;
+
+  bool mIsLogPoints;
+
+  double mEps;
+  double mStep;
+  double mStepMultiplier;
+
+  OBJECTIV_TYPE *mFunctionsArgument;
+  OBJECTIV_TYPE *mStartPoint;
+  OBJECTIV_TYPE* mCurrentPoint;
+  OBJECTIV_TYPE* mCurrentResearchDirection;
+  OBJECTIV_TYPE* mPreviousResearchDirection;
+
+  double MakeResearch(OBJECTIV_TYPE*);
+  void DoStep();
+  double EvaluateObjectiveFunctiuon(const OBJECTIV_TYPE*);
+
+public:
+
+  TLocalMethod();
+  TLocalMethod(TParameters _params, TTask* _pTask, TTrial _startPoint, bool logPoints = false);
+  ~TLocalMethod();
+
+  void SetEps(double);
+  void SetInitialStep(double);
+  void SetStepMultiplier(double);
+  void SetMaxTrials(int);
+
+  int GetTrialsCounter() const;
+  std::vector<TTrial> GetSearchSequence() const;
+
+  TTrial StartOptimization();
+};
+
+#endif //__LOCALMETHOD_H__
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single]
+#include "local_method.h"
+#include <cmath>
+#include <cstring>
+#include <algorithm>
+
+TLocalMethod::TLocalMethod(TParameters _params, TTask* _pTask, TTrial _startPoint, bool logPoints)
+{
+  mEps = _params.Epsilon / 100;
+  if (mEps > 0.0001)
+    mEps = 0.0001;
+  mBestPoint = _startPoint;
+  mStep = _params.Epsilon * 2;
+  mStepMultiplier = 2;
+  mTrialsCounter = 0;
+  mIsLogPoints = logPoints;
+
+  mPTask = _pTask;
+
+  mDimension = mPTask->GetN() - mPTask->GetFixedN();
+  mConstraintsNumber = mPTask->GetNumOfFunc() - 1;
+
+  mStartPoint = new OBJECTIV_TYPE[mDimension];
+  std::memcpy(mStartPoint,
+    _startPoint.y + mPTask->GetFixedN(),
+    mDimension * sizeof(OBJECTIV_TYPE));
+
+  mFunctionsArgument = new OBJECTIV_TYPE[mPTask->GetN()];
+  std::memcpy(mFunctionsArgument,
+    _startPoint.y,
+    mPTask->GetN() * sizeof(OBJECTIV_TYPE));
+  mMaxTrial = MAX_LOCAL_TRIALS_NUMBER;
+}
+
+TLocalMethod::TLocalMethod() : mPTask(NULL), mStartPoint(NULL),
+mFunctionsArgument(NULL), mMaxTrial(MAX_LOCAL_TRIALS_NUMBER)
+{
+}
+
+TLocalMethod::~TLocalMethod()
+{
+  if (mStartPoint)
+    delete[] mStartPoint;
+  if (mFunctionsArgument)
+    delete[] mFunctionsArgument;
+}
+
+void TLocalMethod::DoStep()
+{
+  for (int i = 0; i < mDimension; i++)
+    mCurrentPoint[i] = (1 + mStepMultiplier)*mCurrentResearchDirection[i] -
+    mStepMultiplier*mPreviousResearchDirection[i];
+}
+
+TTrial TLocalMethod::StartOptimization()
+{
+  int k = 0, i = 0;
+  bool needRestart = true;
+  double currentFValue, nextFValue;
+  mTrialsCounter = 0;
+
+  mCurrentPoint = new OBJECTIV_TYPE[mDimension];
+  mCurrentResearchDirection = new OBJECTIV_TYPE[mDimension];
+  mPreviousResearchDirection = new OBJECTIV_TYPE[mDimension];
+
+  while (mTrialsCounter < mMaxTrial) {
+    i++;
+    if (needRestart) {
+      k = 0;
+      std::memcpy(mCurrentPoint, mStartPoint, sizeof(OBJECTIV_TYPE)*mDimension);
+      std::memcpy(mCurrentResearchDirection, mStartPoint, sizeof(OBJECTIV_TYPE)*mDimension);
+      currentFValue = EvaluateObjectiveFunctiuon(mCurrentPoint);
+      needRestart = false;
+    }
+
+    std::swap(mPreviousResearchDirection, mCurrentResearchDirection);
+    std::memcpy(mCurrentResearchDirection, mCurrentPoint, sizeof(OBJECTIV_TYPE)*mDimension);
+    nextFValue = MakeResearch(mCurrentResearchDirection);
+
+    if (currentFValue > nextFValue) {
+      DoStep();
+
+      if (mIsLogPoints)
+      {
+        TTrial currentTrial;
+        currentTrial.index = mBestPoint.index;
+        currentTrial.FuncValues[currentTrial.index] = nextFValue;
+        std::memcpy(currentTrial.y, mFunctionsArgument, sizeof(OBJECTIV_TYPE)*mPTask->GetFixedN());
+        std::memcpy(currentTrial.y + mPTask->GetFixedN(), mCurrentPoint, sizeof(OBJECTIV_TYPE)*mDimension);
+        mSearchSequence.push_back(currentTrial);
+      }
+      k++;
+      currentFValue = nextFValue;
+    }
+    else if (mStep > mEps) {
+      if (k != 0)
+        std::memcpy(mStartPoint, mPreviousResearchDirection, sizeof(OBJECTIV_TYPE)*mDimension);
+      else
+        mStep /= mStepMultiplier;
+      needRestart = true;
+    }
+    else
+      break;
+  }
+
+  if (currentFValue < mBestPoint.FuncValues[mConstraintsNumber])
+  {
+    std::memcpy(mBestPoint.y + mPTask->GetFixedN(),
+      mPreviousResearchDirection, sizeof(OBJECTIV_TYPE)*mDimension);
+    mBestPoint.FuncValues[mConstraintsNumber] = currentFValue;
+    mSearchSequence.push_back(mBestPoint);
+  }
+
+  delete[] mCurrentPoint;
+  delete[] mPreviousResearchDirection;
+  delete[] mCurrentResearchDirection;
+
+  return mBestPoint;
+}
+
+double TLocalMethod::EvaluateObjectiveFunctiuon(const OBJECTIV_TYPE* x)
+{
+  if (mTrialsCounter >= mMaxTrial)
+    return HUGE_VAL;
+
+  for (int i = 0; i < mDimension; i++)
+    if (x[i] < mPTask->GetA()[mPTask->GetFixedN() + i] ||
+      x[i] > mPTask->GetB()[mPTask->GetFixedN() + i])
+      return HUGE_VAL;
+
+  std::memcpy(mFunctionsArgument + mPTask->GetFixedN(), x, mDimension * sizeof(OBJECTIV_TYPE));
+  for (int i = 0; i <= mConstraintsNumber; i++)
+  {
+    double value = mPTask->GetFuncs()[i](mFunctionsArgument);
+    if (i < mConstraintsNumber && value > 0)
+    {
+      mTrialsCounter++;
+      return HUGE_VAL;
+    }
+    else if (i == mConstraintsNumber)
+    {
+      mTrialsCounter++;
+      return value;
+    }
+  }
+
+  return HUGE_VAL;
+}
+
+void TLocalMethod::SetEps(double eps)
+{
+  mEps = eps;
+}
+
+void TLocalMethod::SetInitialStep(double value)
+{
+  mStep = value;
+}
+
+void TLocalMethod::SetStepMultiplier(double value)
+{
+  mStepMultiplier = value;
+}
+
+void TLocalMethod::SetMaxTrials(int count)
+{
+  mMaxTrial = std::min(count, MAX_LOCAL_TRIALS_NUMBER);
+}
+
+int TLocalMethod::GetTrialsCounter() const
+{
+  return mTrialsCounter;
+}
+
+std::vector<TTrial> TLocalMethod::GetSearchSequence() const
+{
+  return mSearchSequence;
+}
+
+double TLocalMethod::MakeResearch(OBJECTIV_TYPE* startPoint)
+{
+  double bestValue = EvaluateObjectiveFunctiuon(startPoint);
+
+  for (int i = 0; i < mDimension; i++)
+  {
+    startPoint[i] += mStep;
+    double rightFvalue = EvaluateObjectiveFunctiuon(startPoint);
+
+    if (rightFvalue > bestValue)
+    {
+      startPoint[i] -= 2 * mStep;
+      double leftFValue = EvaluateObjectiveFunctiuon(startPoint);
+      if (leftFValue > bestValue)
+        startPoint[i] += mStep;
+      else
+        bestValue = leftFValue;
+    }
+    else
+      bestValue = rightFvalue;
+  }
+
+  return bestValue;
+}
+\end{lstlisting}
+
+\subsection{Приложение 4}
+\label{attach4}
+\begin{lstlisting}[frame=single]
+#ifndef __DUAL_QUEUE_H__
+#define __DUAL_QUEUE_H__
+
+#include "minmaxheap.h"
+#include "common.h"
+#include "queue_common.h"
+
+class TPriorityDualQueue : public TPriorityQueueCommon
+{
+protected:
+  int MaxSize;
+  int CurLocalSize;
+  int CurGlobalSize;
+
+  MinMaxHeap< TQueueElement, _less >* pGlobalHeap;
+  MinMaxHeap< TQueueElement, _less >* pLocalHeap;
+
+  void DeleteMinLocalElem();
+  void DeleteMinGlobalElem();
+  void ClearLocal();
+  void ClearGlobal();
+public:
+
+  TPriorityDualQueue(int _MaxSize = DefaultQueueSize); // _MaxSize must be qual to 2^k - 1
+  ~TPriorityDualQueue();
+
+  int GetLocalSize() const;
+  int GetSize() const;
+  int GetMaxSize() const;
+  bool IsLocalEmpty() const;
+  bool IsLocalFull() const;
+  bool IsEmpty() const;
+  bool IsFull() const;
+
+  void Push(double globalKey, double localKey, void *value);
+  void PushWithPriority(double globalKey, double localKey, void *value);
+  void Pop(double *key, void **value);
+
+  void PopFromLocal(double *key, void **value);
+
+  void Clear();
+  void Resize(int size);
+};
+#endif
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single]
+#include "dual_queue.h"
+
+TPriorityDualQueue::TPriorityDualQueue(int _MaxSize)
+{
+  MaxSize = _MaxSize;
+  CurGlobalSize = CurLocalSize = 0;
+  pLocalHeap = new MinMaxHeap< TQueueElement, _less >(MaxSize);
+  pGlobalHeap = new MinMaxHeap< TQueueElement, _less >(MaxSize);
+}
+
+TPriorityDualQueue::~TPriorityDualQueue()
+{
+  delete pLocalHeap;
+  delete pGlobalHeap;
+}
+
+void TPriorityDualQueue::DeleteMinLocalElem()
+{
+  TQueueElement tmp = pLocalHeap->popMin();
+  CurLocalSize--;
+
+  //update linked element in the global queue
+  if (tmp.pLinkedElement != NULL)
+    tmp.pLinkedElement->pLinkedElement = NULL;
+}
+
+void TPriorityDualQueue::DeleteMinGlobalElem()
+{
+  TQueueElement tmp = pGlobalHeap->popMin();
+  CurGlobalSize--;
+
+  //update linked element in the local queue
+  if (tmp.pLinkedElement != NULL)
+    tmp.pLinkedElement->pLinkedElement = NULL;
+}
+
+int TPriorityDualQueue::GetLocalSize() const
+{
+  return CurLocalSize;
+}
+
+int TPriorityDualQueue::GetSize() const
+{
+  return CurGlobalSize;
+}
+
+int TPriorityDualQueue::GetMaxSize() const
+{
+  return MaxSize;
+}
+
+bool TPriorityDualQueue::IsLocalEmpty() const
+{
+  return CurLocalSize == 0;
+}
+
+bool TPriorityDualQueue::IsLocalFull() const
+{
+  return CurLocalSize == MaxSize;
+}
+
+bool TPriorityDualQueue::IsEmpty() const
+{
+  return CurGlobalSize == 0;
+}
+
+bool TPriorityDualQueue::IsFull() const
+{
+  return CurGlobalSize == MaxSize;
+}
+
+void TPriorityDualQueue::Push(double globalKey, double localKey, void * value)
+{
+  TQueueElement* pGlobalElem = NULL, *pLocalElem = NULL;
+  //push to a global queue
+  if (!IsFull()) {
+    CurGlobalSize++;
+    pGlobalElem = pGlobalHeap->push(TQueueElement(globalKey, value));
+  }
+  else {
+    if (globalKey > pGlobalHeap->findMin().Key) {
+      DeleteMinGlobalElem();
+      CurGlobalSize++;
+      pGlobalElem = pGlobalHeap->push(TQueueElement(globalKey, value));
+    }
+  }
+  //push to a local queue
+  if (!IsLocalFull()) {
+    CurLocalSize++;
+    pLocalElem = pLocalHeap->push(TQueueElement(localKey, value));
+  }
+  else {
+    if (localKey > pLocalHeap->findMin().Key) {
+      DeleteMinLocalElem();
+      CurLocalSize++;
+      pLocalElem = pLocalHeap->push(TQueueElement(localKey, value));
+    }
+  }
+  //link elements
+  if (pGlobalElem != NULL && pLocalElem != NULL) {
+    pGlobalElem->pLinkedElement = pLocalElem;
+    pLocalElem->pLinkedElement = pGlobalElem;
+  }
+}
+
+void TPriorityDualQueue::PushWithPriority(double globalKey, double localKey, void * value)
+{
+  TQueueElement* pGlobalElem = NULL, *pLocalElem = NULL;
+  //push to a global queue
+  if (!IsEmpty()) {
+    if (globalKey > pGlobalHeap->findMin().Key) {
+      if (IsFull())
+        DeleteMinGlobalElem();
+      CurGlobalSize++;
+      pGlobalElem = pGlobalHeap->push(TQueueElement(globalKey, value));
+    }
+  }
+  else {
+    CurGlobalSize++;
+    pGlobalElem = pGlobalHeap->push(TQueueElement(globalKey, value));
+  }
+  //push to a local queue
+  if (!IsLocalEmpty()) {
+    if (localKey > pLocalHeap->findMin().Key) {
+      if (IsLocalFull())
+        DeleteMinLocalElem();
+      CurLocalSize++;
+      pLocalElem = pLocalHeap->push(TQueueElement(localKey, value));
+    }
+  }
+  else {
+    CurLocalSize++;
+    pLocalElem = pLocalHeap->push(TQueueElement(localKey, value));
+  }
+  //link elements
+  if (pGlobalElem != NULL && pLocalElem != NULL) {
+    pGlobalElem->pLinkedElement = pLocalElem;
+    pLocalElem->pLinkedElement = pGlobalElem;
+  }
+}
+
+void TPriorityDualQueue::PopFromLocal(double * key, void ** value)
+{
+  TQueueElement tmp = pLocalHeap->popMax();
+  *key = tmp.Key;
+  *value = tmp.pValue;
+  CurLocalSize--;
+
+  //delete linked element from the global queue
+  if (tmp.pLinkedElement != NULL) {
+    pGlobalHeap->deleteElement(tmp.pLinkedElement);
+    CurGlobalSize--;
+  }
+}
+
+void TPriorityDualQueue::Pop(double * key, void ** value)
+{
+  TQueueElement tmp = pGlobalHeap->popMax();
+  *key = tmp.Key;
+  *value = tmp.pValue;
+  CurGlobalSize--;
+
+  //delete linked element from the local queue
+  if (tmp.pLinkedElement != NULL)	{
+    pLocalHeap->deleteElement(tmp.pLinkedElement);
+    CurLocalSize--;
+  }
+}
+
+void TPriorityDualQueue::Clear()
+{
+  ClearLocal();
+  ClearGlobal();
+}
+
+void TPriorityDualQueue::Resize(int size)
+{
+  MaxSize = size;
+  CurGlobalSize = CurLocalSize = 0;
+  delete pLocalHeap;
+  delete pGlobalHeap;
+  pLocalHeap = new MinMaxHeap< TQueueElement, _less >(MaxSize);
+  pGlobalHeap = new MinMaxHeap< TQueueElement, _less >(MaxSize);
+}
+
+void TPriorityDualQueue::ClearLocal()
+{
+  pLocalHeap->clear();
+  CurLocalSize = 0;
+}
+
+void TPriorityDualQueue::ClearGlobal()
+{
+  pGlobalHeap->clear();
+  CurGlobalSize = 0;
+}
+\end{lstlisting}
