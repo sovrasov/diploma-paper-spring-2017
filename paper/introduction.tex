@@ -36,18 +36,38 @@ Globalizer, а также проведено исследование неско
 \label{cube}
 \lbrace y\in R^N:-2^{-1}\leqslant y_i\leqslant 2^{-1},1\leqslant i\leqslant N\rbrace=\{y(x):0\leqslant x\leqslant 1\}
 \end{displaymath}
+На рис. \ref{fig:peano_curve} представлены построенные численно с низкой точностью развёртки на плоскости и
+в трёхмерном пространстве.
+
+\begin{figure}[ht]
+    \centering
+    \subfloat{{\includegraphics[width=0.45\textwidth]{images/peano2d.png} }}
+    \qquad
+    \subfloat{{\includegraphics[width=0.45\textwidth]{images/peano3d.png} }}
+    \caption{Численно построенная развёртка в двухмерном и трёхмерном случаях}
+    \label{fig:peano_curve}
+\end{figure}
 
 Такое отображение позволяет свести задачу в многомерном пространстве к решению
 одномерной ценой ухудшения её свойств. В частности, одномерная функция \(\varphi(y(x))\)
 является не Липшицевой, а Гёльдеровой:
 \begin{displaymath}
 \label{holder}
-|\varphi(y(x_1))-\varphi(y(x_2))|\leqslant H{|x_1-x_2|}^{\frac{1}{N}},x_1,x_2\in[0;1]
+|\varphi(y(x_1))-\varphi(y(x_2))|\leqslant H{|x_1-x_2|}^{\frac{1}{N}},x_1,x_2\in[0;1],
 \end{displaymath}
 где константа Гельдера \(H\) связана с константой Липшица \(L\) соотношением
 \begin{displaymath}
 H=4Ld\sqrt{N},d=\max\{b_i-a_i:1\leqslant i\leqslant N\}.
 \end{displaymath}
+На рис. \ref{fig:evolvent_example} приведена одномерная функция, полученная после применения развёртки к
+парабалоиду вращения \(\varphi(y)=y_1^2+y_2^2\).
+
+\begin{figure}[ht]
+    \center
+    \includegraphics[width=0.75\textwidth]{images/map_paraboloid.pdf}
+    \caption{Пример одномерной функции, порождённой развёрткой}
+    \label{fig:evolvent_example}
+\end{figure}
 
 Область \(D\) также может быть задана с помощью функциональных ограничений.
 Постановка задачи глобальной оптимизации в этом случае будет иметь следующий вид:
