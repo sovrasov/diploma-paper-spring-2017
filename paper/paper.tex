@@ -42,11 +42,11 @@
 
 \usepackage{titlesec}
 \titleformat{\section}
-  {\normalfont\fontsize{14}{15}\bfseries}{\thesection}{5pt}{}
+  {\normalfont\fontsize{14}{15}\bfseries}{\thesection.}{5pt}{}
 \titleformat{\subsection}
-  {\normalfont\fontsize{14}{15}\bfseries}{\thesubsection}{5pt}{}
+  {\normalfont\fontsize{14}{15}\bfseries}{\thesubsection.}{5pt}{}
 \titleformat{\subsubsection}
-  {\normalfont\fontsize{14}{15}\bfseries}{\thesubsubsection}{5pt}{}
+  {\normalfont\fontsize{14}{15}\bfseries}{\thesubsubsection.}{5pt}{}
 
 \usepackage{fontspec}
 \defaultfontfeatures{Ligatures=TeX}
@@ -74,11 +74,11 @@
 
 % Sections style redefinition
 \renewcommand{\thesection}
-  {\thepart\arabic{section}.}
+  {\thepart\arabic{section}}
 \renewcommand{\thesubsection}
-  {\thepart\arabic{section}.\arabic{subsection}.}
+  {\thepart\arabic{section}.\arabic{subsection}}
 \renewcommand{\thesubsubsection}
-  {\thepart\arabic{section}.\arabic{subsection}.\arabic{subsubsection}.}
+  {\thepart\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
 
 % Equations, fugures, tables numbering style redefinition
 \renewcommand{\theequation}
