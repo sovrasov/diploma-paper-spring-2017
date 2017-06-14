@@ -64,13 +64,11 @@
 \ExplSyntaxOff
 
 \usepackage[maxnames=5,
-        backend=bibtex,
-        %backend=biber,
-        %style=gost-numeric,
+        backend=biber,
+        style=gost-numeric,
         sorting=none,
         autolang=other]{biblatex}
-\addbibresource{bibliography}
-
+\addbibresource{bibliography.bib}
 
 % Sections style redefinition
 \renewcommand{\thesection}
@@ -80,13 +78,14 @@
 \renewcommand{\thesubsubsection}
   {\thepart\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
 
+
 % Equations, fugures, tables numbering style redefinition
 \renewcommand{\theequation}
-  {\thesection\arabic{equation}}
+  {\thesection.\arabic{equation}}
 \renewcommand{\thefigure}
-  {\thesection\arabic{figure}}
+  {\thesection.\arabic{figure}}
 \renewcommand{\thetable}
-  {\thesection\arabic{table}}
+  {\thesection.\arabic{table}}
 
 % Enum style redefinition
 \renewcommand{\labelenumii}
