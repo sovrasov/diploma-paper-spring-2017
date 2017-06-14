@@ -16,30 +16,6 @@
 \usepackage[english, russian]{babel}
 \usepackage[width=1.2\textwidth]{caption}
 
-\usepackage{tikz}
-\usetikzlibrary{arrows, shapes, positioning, shadows, trees}
-\tikzset{
-  basic/.style  = {draw, text width=4cm, drop shadow, font=\sffamily, rectangle},
-  root/.style   = {basic, rounded corners=2pt, thin, align=center, fill=gray!1},
-  level 1/.style = {basic, rounded corners=2pt, thin, align=center, fill=gray!1,
-                    sibling distance=55mm, level distance=50pt,
-                    edge from parent/.style={->,draw,fill=black},
-                    >=latex},
-  level 2/.style = {basic, rounded corners=2pt, thin, align=center, fill=gray!1,
-                    sibling distance=55mm, level distance=50pt,
-                    edge from parent/.style={->,draw,fill=black},
-                    >=latex},
-  level 3/.style = {basic, rounded corners=2pt, thin, align=center, fill=gray!1,
-                    sibling distance=55mm, level distance=75pt,
-                    edge from parent/.style={->,draw,fill=black},
-                    >=latex, text width=5cm},
-  level 4/.style = {basic, rounded corners=2pt, thin, align=center, fill=gray!1,
-                    sibling distance=40mm, level distance=50pt,
-                    edge from parent/.style={->,draw,fill=black},
-                    >=latex, text width=3cm},
-}
-
-
 \usepackage{titlesec}
 \titleformat{\section}
   {\normalfont\fontsize{14}{15}\bfseries}{\thesection.}{5pt}{}
