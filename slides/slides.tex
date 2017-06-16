@@ -16,6 +16,10 @@
 \setmainlanguage{russian}
 \setbeamertemplate{itemize item}{\color{black}$\blacktriangleright$}
 
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\sign}{sign}
+
 \graphicspath{ {../paper/images/}{img/} }
 %set pages numeration
 \setbeamertemplate{footline}[frame number]
@@ -56,13 +60,16 @@
   \frametitle{Редукция размерности}
   Основные подходы:
   \begin{itemize}
-    \item Использование развёрток:
+    \item<1-> Использование развёрток:
     \(\lbrace y\in R^N:-2^{-1}\leqslant y_i\leqslant 2^{-1},1\leqslant i\leqslant N\rbrace=\{y(x):0\leqslant x\leqslant 1\}\),
     \(\varphi(y(x^*))=\min\{\varphi(y(x)):x\in [0;1]\}\)
-    \item Многошаговая схема:
+    \item<2-> Многошаговая схема:
     \(\min\limits_{(x_1,..,x_n)\in D} f(x_1,..,x_n)=\min\limits_{a_1\le x_1\le b_1}\min\limits_{a_2\le x_2\le b_2}...\min\limits_{a_n\le x_n\le b_n} f(x_1,...,x_n)\)
-    \item Блочная многошаговая схема:
-      %
+    \item<3-> Блочная многошаговая схема:
+
+    \(u_1=(y_1,y_2,\dots,y_{N_1}),u_2=(y_{N_1+1},y_{N_1+2},\dots,y_{N_1+N_2}),\dots,u_M=(y_{N-N_M+1},y_{N-N_M+2},\dots,y_N)\)
+
+    \(\min\limits_{y\in D}\varphi(y)=\min\limits_{u_1\in D_1}\min\limits_{u_2\in D_2}\dots\min\limits_{u_M\in D_M}\varphi(y)\)
   \end{itemize}
 
 \end{frame}
@@ -93,9 +100,19 @@
 \begin{frame}
   \frametitle{Метод глобальной оптимизации}
   Формулы дял вычисления характеристик:
-
+  \begin{displaymath}
+    R(1)=2\Delta_1-4\dfrac{z_1}{M},R(k+1)=2\Delta_{k+1}-4\dfrac{z_k}{M}
+  \end{displaymath}
+  \begin{displaymath}
+    R(i)=\Delta_i+\dfrac{(z_i-z_{i-1})^2}{M^2\Delta_i}-2\dfrac{z_i+z_{i-1}}{M},1<i<k+1
+  \end{displaymath}
   Правила выбора следующей точки:
-
+  \begin{displaymath}
+    x_{k+1}=\dfrac{x_{t}+x_{t-1}}{2},t=1,t=k+1
+  \end{displaymath}
+  \begin{displaymath}
+    x_{k+j}=\dfrac{x_{t}+x_{t-1}}{2}-\sign(z_{t}-z_{t-1})\dfrac{1}{2r}\left[\dfrac{|z_{t}-z_{t-1}|}{\mu}\right]^N,1<t<k+1
+  \end{displaymath}
 \end{frame}
 
 \begin{frame}
@@ -104,7 +121,14 @@
     \begin{column}{0.5\textwidth}
       Генератор GKLS:
       \begin{displaymath}
-        f(x)=
+        \begin{matrix}
+          f(x)=
+          \left\{
+          \begin{matrix}
+          C_i(x), x \in S_i, i\in 2,\dots ,m \\
+          \Vert x-T \Vert^2 + t, x\not\in S_2,\dots,S_m
+          \end{matrix} \right.
+        \end{matrix}
       \end{displaymath}
     \end{column}
     \begin{column}{0.5\textwidth}
@@ -203,5 +227,10 @@ inline void swapElems(T& arg1, T& arg2)
       \caption*{Операционные характеристики обычного и смешанного АГП на классе GKLS 4d Simple}
   \end{figure}
 \end{frame}
+
+\begin{frame}
+  \frametitle{Пример прикладной задачи}
+\end{frame}
+
 
 \end{document}
