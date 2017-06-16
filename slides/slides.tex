@@ -7,14 +7,15 @@
 \usepackage{caption}
 \usepackage{cmbright}
 \usepackage{fontspec}
-\usepackage{unicode-math}
+%\usepackage{xfrac,unicode-math}
+
 \setmainfont{CMU Sans Serif}
 \setromanfont{CMU Sans Serif}
 \setsansfont{CMU Sans Serif}
 
 \usepackage{polyglossia}
 \setmainlanguage{russian}
-\setbeamertemplate{itemize item}{\color{black}$\blacktriangleright$}
+%\setbeamertemplate{itemize item}{\color{black}$\blacktriangleright$}
 
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
@@ -64,7 +65,7 @@
     \(\lbrace y\in R^N:-2^{-1}\leqslant y_i\leqslant 2^{-1},1\leqslant i\leqslant N\rbrace=\{y(x):0\leqslant x\leqslant 1\}\),
     \(\varphi(y(x^*))=\min\{\varphi(y(x)):x\in [0;1]\}\)
     \item<2-> Многошаговая схема:
-    \(\min\limits_{(x_1,..,x_n)\in D} f(x_1,..,x_n)=\min\limits_{a_1\le x_1\le b_1}\min\limits_{a_2\le x_2\le b_2}...\min\limits_{a_n\le x_n\le b_n} f(x_1,...,x_n)\)
+    \(\min\limits_{(x_1,..,x_n)\in D} f(x_1,..,x_n)=\min\limits_{a_1\leqslant x_1\leqslant b_1}\min\limits_{a_2\leqslant x_2\leqslant b_2}...\min\limits_{a_n\leqslant x_n\leqslant b_n} f(x_1,...,x_n)\)
     \item<3-> Блочная многошаговая схема:
 
     \(u_1=(y_1,y_2,\dots,y_{N_1}),u_2=(y_{N_1+1},y_{N_1+2},\dots,y_{N_1+N_2}),\dots,u_M=(y_{N-N_M+1},y_{N-N_M+2},\dots,y_N)\)
@@ -78,18 +79,18 @@
   \frametitle{Метод глобальной оптимизации}
   Общая схема характеристического метода:
   пусть имеется \(k\) результатов испытаний, далее:
-
-  Шаг 1. Упорядочить поисковую информацию по возрастанию
-  координат точек испытаний
-
-  Шаг 2. Вычислить для каждого интервала
-  величину \(R(i)\), называемую характеристикой.
-
-  Шаг 3. Выбрать интервал номер \(t\) с наибольшей
-  характеристикой и провести в нем испытание:
-  \begin{displaymath}
-    x^{k+1}=d(t)\in (x_{t-1}, x_t)
-  \end{displaymath}
+  \begin{enumerate}
+    \setlength{\itemindent}{.1in}
+    \item[Шаг 1.] Упорядочить поисковую информацию по возрастанию
+    координат точек испытаний
+    \item[Шаг 2.] Вычислить для каждого интервала
+    величину \(R(i)\), называемую характеристикой.
+    \item[Шаг 3.] Выбрать интервал номер \(t\) с наибольшей
+    характеристикой и провести в нем испытание:
+    \begin{displaymath}
+      x^{k+1}=d(t)\in (x_{t-1}, x_t)
+    \end{displaymath}
+  \end{enumerate}
 
   Критерий остановки:
   \begin{displaymath}
@@ -134,7 +135,7 @@
     \begin{column}{0.5\textwidth}
       \centerline{\includegraphics[width=0.9\textwidth]{gkls_loc.png}}
     \end{column}
-\end{columns}
+  \end{columns}
 \end{frame}
 
 \begin{frame}
@@ -230,7 +231,15 @@ inline void swapElems(T& arg1, T& arg2)
 
 \begin{frame}
   \frametitle{Пример прикладной задачи}
-\end{frame}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
 
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centerline{\includegraphics[width=1.2\textwidth]{solution.pdf}}
+    \end{column}
+  \end{columns}
+
+\end{frame}
 
 \end{document}
