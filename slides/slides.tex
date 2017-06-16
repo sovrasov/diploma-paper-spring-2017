@@ -16,6 +16,7 @@
 \setmainlanguage{russian}
 \setbeamertemplate{itemize item}{\color{black}$\blacktriangleright$}
 
+\graphicspath{ {../paper/images/}{img/} }
 %set pages numeration
 \setbeamertemplate{footline}[frame number]
 \setbeamertemplate{headline}{}
@@ -25,6 +26,7 @@
 \author{\textbf{В.В.~Соврасов}}
 \institute{ННГУ им. Н.И. Лобачевского}
 \date{}
+
 \begin{document}
 
 \begin{frame}[noframenumbering,plain]
@@ -33,13 +35,15 @@
 
 \begin{frame}
   \frametitle{Постановка задачи}
+    \(D=\{y\in R^N:a_i\leqslant x_i\leqslant{b_i}, 1\leqslant{i}\leqslant{N}\}\) ---
+    некоторый гиперинтервал, на котором определены функции задачи.
   \begin{displaymath}
-    \begin{array}{lr}
-      D=\{y\in R^N:a_i\leqslant x_i\leqslant{b_i}, 1\leqslant{i}\leqslant{N}\} \\
-      \varphi(y^*)=\min\{\varphi(y):y\in D\}
+    \begin{array}{c}
+      Q=\{y\in D: g_j(y)\leqslant 0,  1\leqslant{j}\leqslant{m}\}  \\
+      \varphi(y^*)=\min\{\varphi(y):y\in Q\}
     \end{array}
   \end{displaymath}
-  Предполагается, что целевая функция удовлетворяет условию Липшица в области \(D\):
+  Предполагается, что целевая функция \(\varphi(y)\) и ограничения \(g_j(y)\) удовлетворяет условию Липшица в области \(D\):
   \begin{displaymath}
   |\varphi(y_1)-\varphi(y_2)|\leqslant L\Vert y_1-y_2\Vert,y_1,y_2\in D,0<L<\infty
   \end{displaymath}
@@ -50,6 +54,17 @@
 
 \begin{frame}
   \frametitle{Редукция размерности}
+  Основные подходы:
+  \begin{itemize}
+    \item Использование развёрток:
+    \(\lbrace y\in R^N:-2^{-1}\leqslant y_i\leqslant 2^{-1},1\leqslant i\leqslant N\rbrace=\{y(x):0\leqslant x\leqslant 1\}\),
+    \(\varphi(y(x^*))=\min\{\varphi(y(x)):x\in [0;1]\}\)
+    \item Многошаговая схема:
+    \(\min\limits_{(x_1,..,x_n)\in D} f(x_1,..,x_n)=\min\limits_{a_1\le x_1\le b_1}\min\limits_{a_2\le x_2\le b_2}...\min\limits_{a_n\le x_n\le b_n} f(x_1,...,x_n)\)
+    \item Блочная многошаговая схема:
+      %
+  \end{itemize}
+
 \end{frame}
 
 \begin{frame}
@@ -57,14 +72,14 @@
   Общая схема характеристического метода:
   пусть имеется \(k\) результатов испытаний, далее:
 
-Шаг 1. Упорядочить поисковую информацию по возрастанию
-координат точек испытаний
+  Шаг 1. Упорядочить поисковую информацию по возрастанию
+  координат точек испытаний
 
-Шаг 2. Вычислить для каждого интервала
-величину \(R(i)\), называемую характеристикой.
+  Шаг 2. Вычислить для каждого интервала
+  величину \(R(i)\), называемую характеристикой.
 
-Шаг 3. Выбрать интервал номер \(t\) с наибольшей
-характеристикой и провести в нем испытание:
+  Шаг 3. Выбрать интервал номер \(t\) с наибольшей
+  характеристикой и провести в нем испытание:
   \begin{displaymath}
     x^{k+1}=d(t)\in (x_{t-1}, x_t)
   \end{displaymath}
@@ -77,10 +92,25 @@
 
 \begin{frame}
   \frametitle{Метод глобальной оптимизации}
+  Формулы дял вычисления характеристик:
+
+  Правила выбора следующей точки:
+
 \end{frame}
 
 \begin{frame}
   \frametitle{Класс тестовых задач}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      Генератор GKLS:
+      \begin{displaymath}
+        f(x)=
+      \end{displaymath}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centerline{\includegraphics[width=0.9\textwidth]{gkls_loc.png}}
+    \end{column}
+\end{columns}
 \end{frame}
 
 \begin{frame}
@@ -104,12 +134,12 @@
   \begin{figure}[ht]
         \begin{minipage}[b]{0.49\linewidth}
             \centering
-            \includegraphics[width=\textwidth]{../paper/images/local_search_op.png}
+            \includegraphics[width=\textwidth]{local_search_op.png}
             \caption*{GKLS 4d Simple}
         \end{minipage}
         \begin{minipage}[b]{0.49\linewidth}
             \centering
-            \includegraphics[width=\textwidth]{../paper/images/local_search_op.png}
+            \includegraphics[width=\textwidth]{local_search_op.png}
             \caption*{GKLS 5d Simple}
         \end{minipage}
     \end{figure}
@@ -155,7 +185,7 @@ inline void swapElems(T& arg1, T& arg2)
 Схема перекрёстных ссылок на элементы очередей:
     \begin{figure}
       \center
-        \includegraphics[width=.7\textwidth]{../paper/images/examin_heaps.png}
+        \includegraphics[width=.7\textwidth]{examin_heaps.png}
     \end{figure}
 \end{frame}
 
@@ -169,7 +199,7 @@ inline void swapElems(T& arg1, T& arg2)
   \frametitle{Смешанный алгоритм}
   \begin{figure}
     \center
-      \includegraphics[width=0.7\textwidth]{../paper/images/mixed_op4d.png}
+      \includegraphics[width=0.7\textwidth]{mixed_op4d.png}
       \caption*{Операционные характеристики обычного и смешанного АГП на классе GKLS 4d Simple}
   \end{figure}
 \end{frame}
