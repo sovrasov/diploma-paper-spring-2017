@@ -20,6 +20,7 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 \DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\re}{\operatorname{Re}}
 
 \graphicspath{ {../paper/images/}{img/} }
 %set pages numeration
@@ -94,7 +95,7 @@
 
   Критерий остановки:
   \begin{displaymath}
-    \Vert x_t - x_{t-1}\Vert < \varepsilon
+    x_t - x_{t-1} < \varepsilon
   \end{displaymath}
 \end{frame}
 
@@ -133,7 +134,7 @@
       \end{displaymath}
     \end{column}
     \begin{column}{0.5\textwidth}
-      \centerline{\includegraphics[width=0.9\textwidth]{gkls_loc.png}}
+      \centerline{\includegraphics[width=0.9\textwidth]{gkls_color.png}}
     \end{column}
   \end{columns}
 \end{frame}
@@ -234,6 +235,23 @@ inline void swapElems(T& arg1, T& arg2)
   \begin{columns}
     \begin{column}{0.5\textwidth}
 
+      \begin{displaymath}
+                \dot x = (A+B_u\Theta)x + B_v v, x(0)=0
+              \end{displaymath}
+              Выходы системы описываются выражениями:
+              \begin{displaymath}
+                z_k=(C_k+B_u\Theta),k=\overline{1,N}
+              \end{displaymath}
+              Критерии оптимальности:
+              \begin{displaymath}
+                J_k(\Theta)=\sup_{v\in L_2} \frac{\max_{1\leqslant i \leqslant n_k} \sup_{t\geqslant 0}|z_k^{(i)}(\Theta,t)|}{||v||_2} \rightarrow\min_{\Theta}
+              \end{displaymath}
+            Ограничение на устойчивость системы:
+            \begin{displaymath}
+              g_0(\Theta)=\min_{j}\re(\lambda_j(A+B_u\Theta)) < 0
+            \end{displaymath}
+
+            %Многокритериальная задача сводится к скалярной методом \(\varepsilon\)-ограничений или с помощью свёртки Гермейера.
     \end{column}
     \begin{column}{0.5\textwidth}
       \centerline{\includegraphics[width=1.2\textwidth]{solution.pdf}}
