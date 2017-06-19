@@ -1,17 +1,18 @@
 \documentclass[aspectratio=1610]{beamer}
 
 \usetheme{unnslides}
+\usefonttheme{professionalfonts}
 
 \usepackage{listings}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{cmbright}
 \usepackage{fontspec}
-%\usepackage{xfrac,unicode-math}
+\usepackage{xfrac,unicode-math}
 
-\setmainfont{CMU Sans Serif}
-\setromanfont{CMU Sans Serif}
+\setromanfont{CMU Serif}
 \setsansfont{CMU Sans Serif}
+\setmathfont{Latin Modern Math}
 
 \usepackage{polyglossia}
 \setmainlanguage{russian}
@@ -20,7 +21,7 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 \DeclareMathOperator{\sign}{sign}
-\DeclareMathOperator{\re}{\operatorname{Re}}
+\DeclareMathOperator{\re}{Re}}
 
 \graphicspath{ {../paper/images/}{img/} }
 %set pages numeration
@@ -232,26 +233,39 @@ inline void swapElems(T& arg1, T& arg2)
 
 \begin{frame}
   \frametitle{Пример прикладной задачи}
+
+    \begin{displaymath}
+      \dot x = (A+B_u\Theta)x + B_v v, x(0)=0
+    \end{displaymath}
+    Выходы системы описываются выражениями:
+    \begin{displaymath}
+      z_k=(C_k+B_u\Theta),k=\overline{1,N}
+    \end{displaymath}
+    Критерии оптимальности:
+    \begin{displaymath}
+      J_k(\Theta)=\sup_{v\in L_2} \frac{\max_{1\leqslant i \leqslant n_k} \sup_{t\geqslant 0}|z_k^{(i)}(\Theta,t)|}{||v||_2} \rightarrow\min_{\Theta}
+    \end{displaymath}
+    Ограничение на устойчивость системы:
+    \begin{displaymath}
+      g_0(\Theta)=\min_{j}\re(\lambda_j(A+B_u\Theta)) < 0
+    \end{displaymath}
+
+    Многокритериальная задача сводится к скалярной методом \(\varepsilon\)-ограничений или с помощью свёртки Гермейера.
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Пример прикладной задачи}
   \begin{columns}
     \begin{column}{0.5\textwidth}
 
+      Постановка задачи в методе \(\varepsilon\)-ограничений:
       \begin{displaymath}
-                \dot x = (A+B_u\Theta)x + B_v v, x(0)=0
-              \end{displaymath}
-              Выходы системы описываются выражениями:
-              \begin{displaymath}
-                z_k=(C_k+B_u\Theta),k=\overline{1,N}
-              \end{displaymath}
-              Критерии оптимальности:
-              \begin{displaymath}
-                J_k(\Theta)=\sup_{v\in L_2} \frac{\max_{1\leqslant i \leqslant n_k} \sup_{t\geqslant 0}|z_k^{(i)}(\Theta,t)|}{||v||_2} \rightarrow\min_{\Theta}
-              \end{displaymath}
-            Ограничение на устойчивость системы:
-            \begin{displaymath}
-              g_0(\Theta)=\min_{j}\re(\lambda_j(A+B_u\Theta)) < 0
-            \end{displaymath}
+        J_2(\Theta^*)=\min\{\Theta: J_1(\Theta) < \varepsilon\}
+      \end{displaymath}
 
-            %Многокритериальная задача сводится к скалярной методом \(\varepsilon\)-ограничений или с помощью свёртки Гермейера.
+      Решается серия задач при различных значениях \(\varepsilon\).
+
     \end{column}
     \begin{column}{0.5\textwidth}
       \centerline{\includegraphics[width=1.2\textwidth]{solution.pdf}}
