@@ -8,7 +8,8 @@
 \usepackage{caption}
 \usepackage{cmbright}
 \usepackage{fontspec}
-\usepackage{xfrac,unicode-math}
+\usepackage{unicode-math}
+\usepackage{amsfonts}
 
 \setromanfont{CMU Serif}
 \setsansfont{CMU Sans Serif}
@@ -42,7 +43,7 @@
 
 \begin{frame}
   \frametitle{Постановка задачи}
-    \(D=\{y\in R^N:a_i\leqslant x_i\leqslant{b_i}, 1\leqslant{i}\leqslant{N}\}\) ---
+    \(D=\{y\in \mathbf{R}^N:a_i\leqslant x_i\leqslant{b_i}, 1\leqslant{i}\leqslant{N}\}\) ---
     некоторый гиперинтервал, на котором определены функции задачи.
   \begin{displaymath}
     \begin{array}{c}
@@ -133,6 +134,12 @@
           \end{matrix} \right.
         \end{matrix}
       \end{displaymath}
+
+      \begin{itemize}
+        \item варьируемое число локальных минимумов;
+        \item варьируемый размер области притяжения глобального минимума;
+        \item размерность функции также задаётся.
+      \end{itemize}
     \end{column}
     \begin{column}{0.5\textwidth}
       \centerline{\includegraphics[width=0.9\textwidth]{gkls_color.png}}
@@ -144,14 +151,14 @@
 \frametitle{Использование методов локальной оптимизации}
 Способы использования локального поиска (метод Хука-Дживса):\
 \begin{enumerate}
-  \item Запуск из лучшей найденной точки после окончания работы АГП.
+  \item Запуск из лучшей найденной точки после окончания работы АГП;
   \item Запуски из текущих лучших точек в процессе работы АГП.
 \end{enumerate}
 \bigbreak
 Стратегии сохранения информации (для п. 2):
 \begin{itemize}
-  \item добавлять только лучшие точки
-  \item добавлять в поисковую информацию все точки
+  \item добавлять только лучшие точки;
+  \item добавлять в поисковую информацию все точки.
 \end{itemize}
 \end{frame}
 
@@ -239,7 +246,7 @@ inline void swapElems(T& arg1, T& arg2)
     \end{displaymath}
     Выходы системы описываются выражениями:
     \begin{displaymath}
-      z_k=(C_k+B_u\Theta),k=\overline{1,N}
+      z_k=(C_k+D_k\Theta)x,k=\overline{1,N}
     \end{displaymath}
     Критерии оптимальности:
     \begin{displaymath}
@@ -262,7 +269,7 @@ inline void swapElems(T& arg1, T& arg2)
     \begin{column}{0.7\textwidth}
 
       Рассматривется система из \(n\) материальных точек, связанных упруго-диссипативными элементами.
-      При \(n=2\):
+      Например, при \(n=2\):
       \begin{displaymath}
         \begin{array}{cr}
           \begin{cases}
@@ -272,6 +279,8 @@ inline void swapElems(T& arg1, T& arg2)
           \xi_1(0)=\xi_2(0),\;\dot\xi_1(0)=\dot\xi_2(0)=0
       \end{array}
       \end{displaymath}
+
+      В реальной задаче \(n=10\), состояние не полностью наблюдаемо.
 
     \end{column}
     \begin{column}{0.3\textwidth}
@@ -288,10 +297,11 @@ inline void swapElems(T& arg1, T& arg2)
 
       Постановка задачи в методе главного критерия:
       \begin{displaymath}
-        J_2(\Theta^*)=\min\{\Theta: J_1(\Theta) < \varepsilon\}
+        J_2(\Theta^*)=\min\{\Theta: J_1(\Theta) < \varepsilon,g_0(\Theta)\leqslant 0\}
       \end{displaymath}
 
-      Решается серия задач при различных значениях \(\varepsilon\).
+      Решается серия задач при различных значениях \(\varepsilon\). Глобально-оптимальное решение
+      при каждом \(\varepsilon\) --- Слейтерова точка в исходной задаче.
 
     \end{column}
     \begin{column}{0.5\textwidth}
