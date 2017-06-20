@@ -21,7 +21,7 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 \DeclareMathOperator{\sign}{sign}
-\DeclareMathOperator{\re}{Re}}
+\DeclareMathOperator{\re}{Re}
 
 \graphicspath{ {../paper/images/}{img/} }
 %set pages numeration
@@ -256,6 +256,21 @@ inline void swapElems(T& arg1, T& arg2)
 
 \begin{frame}
   \frametitle{Пример прикладной задачи}
+  Рассматривется система из \(n\) материальных точек, связанных упругими элементами.
+  При \(n=2\):
+  \begin{displaymath}
+    \begin{array}{cr}
+      \begin{cases}
+        \ddot \xi_1 = -\beta(\dot\xi_1 - \dot\xi_2) - \xi_1 + \xi_2 + u + v \\
+        \ddot \xi_2 = -\beta(\dot\xi_2 - \dot\xi_1) - \xi_2 + \xi_1 + v
+      \end{cases} \\
+      \xi_1(0)=\xi_2(0),\;\dot\xi_1(0)=\dot\xi_2(0)=0
+  \end{array}
+  \end{displaymath}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Пример прикладной задачи (результаты)}
   \begin{columns}
     \begin{column}{0.5\textwidth}
 
