@@ -250,23 +250,35 @@ inline void swapElems(T& arg1, T& arg2)
       g_0(\Theta)=\min_{j}\re(\lambda_j(A+B_u\Theta)) < 0
     \end{displaymath}
 
-    Многокритериальная задача сводится к скалярной методом \(\varepsilon\)-ограничений или с помощью свёртки Гермейера.
+    Многокритериальная задача сводится к скалярной методом главного критерия или с помощью свёртки Гермейера.
 
 \end{frame}
 
 \begin{frame}
   \frametitle{Пример прикладной задачи}
-  Рассматривется система из \(n\) материальных точек, связанных упругими элементами.
-  При \(n=2\):
-  \begin{displaymath}
-    \begin{array}{cr}
-      \begin{cases}
-        \ddot \xi_1 = -\beta(\dot\xi_1 - \dot\xi_2) - \xi_1 + \xi_2 + u + v \\
-        \ddot \xi_2 = -\beta(\dot\xi_2 - \dot\xi_1) - \xi_2 + \xi_1 + v
-      \end{cases} \\
-      \xi_1(0)=\xi_2(0),\;\dot\xi_1(0)=\dot\xi_2(0)=0
-  \end{array}
-  \end{displaymath}
+
+
+  \begin{columns}
+    \begin{column}{0.7\textwidth}
+
+      Рассматривется система из \(n\) материальных точек, связанных упруго-диссипативными элементами.
+      При \(n=2\):
+      \begin{displaymath}
+        \begin{array}{cr}
+          \begin{cases}
+            \ddot \xi_1 = -\beta(\dot\xi_1 - \dot\xi_2) - \xi_1 + \xi_2 + u + v \\
+            \ddot \xi_2 = -\beta(\dot\xi_2 - \dot\xi_1) - \xi_2 + \xi_1 + v
+          \end{cases} \\
+          \xi_1(0)=\xi_2(0),\;\dot\xi_1(0)=\dot\xi_2(0)=0
+      \end{array}
+      \end{displaymath}
+
+    \end{column}
+    \begin{column}{0.3\textwidth}
+      \centerline{\includegraphics[width=.5\textwidth]{spring.png}}
+    \end{column}
+  \end{columns}
+
 \end{frame}
 
 \begin{frame}
@@ -274,7 +286,7 @@ inline void swapElems(T& arg1, T& arg2)
   \begin{columns}
     \begin{column}{0.5\textwidth}
 
-      Постановка задачи в методе \(\varepsilon\)-ограничений:
+      Постановка задачи в методе главного критерия:
       \begin{displaymath}
         J_2(\Theta^*)=\min\{\Theta: J_1(\Theta) < \varepsilon\}
       \end{displaymath}
