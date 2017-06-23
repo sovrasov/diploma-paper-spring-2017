@@ -62,20 +62,32 @@
 
 \begin{frame}
   \frametitle{Редукция размерности}
-  Основные подходы:
-  \begin{itemize}
-    \item<1-> Использование развёрток:
+  %Основные подходы:
+  %\begin{itemize}
+    %\item<1->
+     Использование развёрток:
     \(\lbrace y\in \mathbf{R}^N:-2^{-1}\leqslant y_i\leqslant 2^{-1},1\leqslant i\leqslant N\rbrace=\{y(x):0\leqslant x\leqslant 1\}\),
     \(\varphi(y(x^*))=\min\{\varphi(y(x)):x\in [0;1]\}\)
-    \item<2-> Многошаговая схема:
-    \(\min\limits_{(x_1,..,x_n)\in D} f(x_1,..,x_n)=\min\limits_{a_1\leqslant x_1\leqslant b_1}\min\limits_{a_2\leqslant x_2\leqslant b_2}...\min\limits_{a_n\leqslant x_n\leqslant b_n} f(x_1,...,x_n)\)
-    \item<3-> Блочная многошаговая схема:
+    %\item<2->
+    %\item<3-> Блочная многошаговая схема:
 
-    \(u_1=(y_1,y_2,\dots,y_{N_1}),u_2=(y_{N_1+1},y_{N_1+2},\dots,y_{N_1+N_2}),\dots,u_M=(y_{N-N_M+1},y_{N-N_M+2},\dots,y_N)\)
-
-    \(\min\limits_{y\in D}\varphi(y)=\min\limits_{u_1\in D_1}\min\limits_{u_2\in D_2}\dots\min\limits_{u_M\in D_M}\varphi(y)\)
-  \end{itemize}
-
+    %\(u_1=(y_1,y_2,\dots,y_{N_1}),u_2=(y_{N_1+1},y_{N_1+2},\dots,y_{N_1+N_2}),\dots,u_M=(y_{N-N_M+1},y_{N-N_M+2},\dots,y_N)\)
+    %\(\min\limits_{y\in D}\varphi(y)=\min\limits_{u_1\in D_1}\min\limits_{u_2\in D_2}\dots\min\limits_{u_M\in D_M}\varphi(y)\)
+  %\end{itemize}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{figure}[ht]
+        \centerline{\includegraphics[width=.5\textwidth]{peano2d.png}}
+      \end{figure}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{figure}[ht]
+      \centerline{\includegraphics[width=.6\textwidth]{peano3d.png}}
+      \end{figure}
+    \end{column}
+  \end{columns}
+  Многошаговая схема:
+  \(\min\limits_{(x_1,..,x_n)\in D} f(x_1,..,x_n)=\min\limits_{a_1\leqslant x_1\leqslant b_1}\min\limits_{a_2\leqslant x_2\leqslant b_2}...\min\limits_{a_n\leqslant x_n\leqslant b_n} f(x_1,...,x_n)\)
 \end{frame}
 
 \begin{frame}
@@ -103,7 +115,7 @@
 
 \begin{frame}
   \frametitle{Метод глобальной оптимизации}
-  Формулы дял вычисления характеристик:
+  Формулы дял вычисления характеристик в методе Стронгина:
   \begin{displaymath}
     R(1)=2\Delta_1-4\dfrac{z_1}{M},R(k+1)=2\Delta_{k+1}-4\dfrac{z_k}{M}
   \end{displaymath}
@@ -115,7 +127,7 @@
     x_{k+1}=\dfrac{x_{t}+x_{t-1}}{2},t=1,t=k+1
   \end{displaymath}
   \begin{displaymath}
-    x_{k+j}=\dfrac{x_{t}+x_{t-1}}{2}-\sign(z_{t}-z_{t-1})\dfrac{1}{2r}\left[\dfrac{|z_{t}-z_{t-1}|}{\mu}\right]^N,1<t<k+1
+    x_{k+1}=\dfrac{x_{t}+x_{t-1}}{2}-\sign(z_{t}-z_{t-1})\dfrac{1}{2r}\left[\dfrac{|z_{t}-z_{t-1}|}{\mu}\right]^N,1<t<k+1
   \end{displaymath}
 \end{frame}
 
@@ -256,11 +268,11 @@ inline void swapElems(T& arg1, T& arg2)
   \end{displaymath}
 
   \begin{displaymath}
-    M_i=r\cdot \max\{H_i, \frac{\lambda_i}{r}+\frac{r-1}{r}\gamma_i,\xi\}
+    \overline{M_i}=r\cdot \max\{H_i, \frac{\lambda_i}{r}+\frac{r-1}{r}\gamma_i,\xi\}
   \end{displaymath}
 \end{frame}
 
-\begin{frame}
+\begin{frame}<presentation:0>
 \frametitle{Адаптивная оценка константы Гёльдера}
   \begin{figure}[ht]
         \begin{minipage}[b]{0.49\linewidth}
@@ -315,7 +327,7 @@ inline void swapElems(T& arg1, T& arg2)
       g_0(\Theta)=\min_{j}\re(\lambda_j(A+B_u\Theta)) < 0
     \end{displaymath}
 
-    Многокритериальная задача сводится к скалярной методом главного критерия или с помощью свёртки Гермейера.
+    Многокритериальная задача сводится к скалярной методом главного критерия.
 
 \end{frame}
 
@@ -349,14 +361,15 @@ inline void swapElems(T& arg1, T& arg2)
 \begin{frame}
   \frametitle{Пример прикладной задачи (результаты)}
   \begin{columns}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.4\textwidth}
 
       Постановка задачи в методе главного критерия:
-      \begin{displaymath}
-        J_2(\Theta^*)=\min\{J_2(\Theta): J_1(\Theta) < \varepsilon,g_0(\Theta)\leqslant 0\}
-      \end{displaymath}
+      \begin{align*}
+        J_2(\Theta^*)=\min\{J_2(\Theta): J_1(\Theta) < \varepsilon, \\
+        g_0(\Theta)\leqslant 0\}
+      \end{align*}
 
-      Решается серия задач при различных значениях \(\varepsilon\). Глобально-оптимальное решение
+      Решается серия задач трёхмерных при различных значениях \(\varepsilon\). Глобально-оптимальное решение
       при каждом \(\varepsilon\) --- Слейтерова точка в исходной задаче.
 
     \end{column}
