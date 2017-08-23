@@ -1,0 +1,3 @@
+[submodule "3rd-party/UseLATEX"]
+	path = 3rd-party/UseLATEX
+	url = https://github.com/kmorel/UseLATEX.git
