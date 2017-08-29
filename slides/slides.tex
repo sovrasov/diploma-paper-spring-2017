@@ -114,24 +114,6 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Метод глобальной оптимизации}
-  Формулы дял вычисления характеристик в методе Стронгина:
-  \begin{displaymath}
-    R(1)=2\Delta_1-4\dfrac{z_1}{M},R(k+1)=2\Delta_{k+1}-4\dfrac{z_k}{M}
-  \end{displaymath}
-  \begin{displaymath}
-    R(i)=\Delta_i+\dfrac{(z_i-z_{i-1})^2}{M^2\Delta_i}-2\dfrac{z_i+z_{i-1}}{M},1<i<k+1
-  \end{displaymath}
-  Правила выбора следующей точки:
-  \begin{displaymath}
-    x_{k+1}=\dfrac{x_{t}+x_{t-1}}{2},t=1,t=k+1
-  \end{displaymath}
-  \begin{displaymath}
-    x_{k+1}=\dfrac{x_{t}+x_{t-1}}{2}-\sign(z_{t}-z_{t-1})\dfrac{1}{2r}\left[\dfrac{|z_{t}-z_{t-1}|}{\mu}\right]^N,1<t<k+1
-  \end{displaymath}
-\end{frame}
-
-\begin{frame}
   \frametitle{Класс тестовых задач}
   \begin{columns}
     \begin{column}{0.5\textwidth}
@@ -209,38 +191,6 @@
   \end{itemize}
 \end{frame}
 
-\defverbatim[colored]\lstI{
-\begin{lstlisting}[language=C++,keywordstyle=\color{red}]
-inline void swapElems(T& arg1, T& arg2)
-{
-  if (arg1.pLinkedElement != NULL &&
-      arg2.pLinkedElement != NULL)
-    std::swap(arg1.pLinkedElement->pLinkedElement,
-      arg2.pLinkedElement->pLinkedElement);
-  else if (arg1.pLinkedElement != NULL)
-    arg1.pLinkedElement->pLinkedElement = &arg2;
-  else if(arg2.pLinkedElement != NULL)
-    arg2.pLinkedElement->pLinkedElement = &arg1;
-  std::swap(arg1, arg2);
-}
-\end{lstlisting}
-}
-
-\begin{frame}
-\frametitle{Смешанный алгоритм}
-Схема перекрёстных ссылок на элементы очередей:
-    \begin{figure}
-      \center
-        \includegraphics[width=.7\textwidth]{examin_heaps.png}
-    \end{figure}
-\end{frame}
-
-\begin{frame}
-\frametitle{Смешанный алгоритм}
-Алгоритм обмена элементов при погружении/всплытии:
-\lstI
-\end{frame}
-
 \begin{frame}
   \frametitle{Смешанный алгоритм}
   \begin{figure}
@@ -250,86 +200,46 @@ inline void swapElems(T& arg1, T& arg2)
   \end{figure}
 \end{frame}
 
-\begin{frame}
-\frametitle{Адаптивная оценка константы Гёльдера}
-  Вместо общей оценки \(M\) для каждого интервала вычисляется своя оценка \(M_i\):
-  \begin{displaymath}
-    \begin{array}{c}
-      H_i=\frac{|z_i-z_{i-1}|}{\Delta_i} \\
-      \lambda_i=\max\{H_{i-1},H_i,H_{i+1}\} \\
-      H^k=\max\{H_i:i=2,\dots ,k\} \\
-      \gamma_i=H^k\frac{\Delta_i}{\Delta^{max}} \\
-      \Delta^{max}=\max\{\Delta_{i}:i=2,\dots ,k\}
-    \end{array}
-  \end{displaymath}
-
-  \begin{displaymath}
-    M_i=r\cdot \max\{H_i, \frac{1}{2}(\lambda_i+\gamma_i),\xi\}
-  \end{displaymath}
-
-  \begin{displaymath}
-    \overline{M_i}=r\cdot \max\{H_i, \frac{\lambda_i}{r}+\frac{r-1}{r}\gamma_i,\xi\}
-  \end{displaymath}
-\end{frame}
-
-\begin{frame}<presentation:0>
-\frametitle{Адаптивная оценка константы Гёльдера}
-  \begin{figure}[ht]
-        \begin{minipage}[b]{0.49\linewidth}
-            \centering
-            \includegraphics[width=\textwidth]{gkls_glob.png}
-            \caption*{Неадаптивная оценка}
-        \end{minipage}
-        \begin{minipage}[b]{0.49\linewidth}
-            \centering
-            \includegraphics[width=\textwidth]{gkls_loc.png}
-            \caption*{Адаптивная оценка}
-        \end{minipage}
-  \end{figure}
-\end{frame}
-
-\begin{frame}
-\frametitle{Адаптивная оценка константы Гёльдера}
-\begin{columns}
-  \begin{column}{0.5\textwidth}
-    \begin{figure}[ht]
-      \centerline{\includegraphics[width=1.1\textwidth]{gkls-s.pdf}}
-    \caption*{GKLS Simple 2d}
-    \end{figure}
-  \end{column}
-  \begin{column}{0.5\textwidth}
-    \begin{figure}[ht]
-    \centerline{\includegraphics[width=1.1\textwidth]{grishagin.pdf}}
-    \caption*{\(F_{GR}\)}
-    \end{figure}
-  \end{column}
-\end{columns}
-
-\end{frame}
-
-
-\begin{frame}
-  \frametitle{Пример прикладной задачи}
-
-    \begin{displaymath}
-      \dot x = (A+B_u\Theta)x + B_v v, x(0)=0
-    \end{displaymath}
-    Выходы системы описываются выражениями:
-    \begin{displaymath}
-      z_k=(C_k+D_k\Theta)x,k=\overline{1,N}
-    \end{displaymath}
-    Критерии оптимальности:
-    \begin{displaymath}
-      J_k(\Theta)=\sup_{v\in L_2} \frac{\max_{1\leqslant i \leqslant n_k} \sup_{t\geqslant 0}|z_k^{(i)}(\Theta,t)|}{||v||_2} \rightarrow\min_{\Theta}
-    \end{displaymath}
-    Ограничение на устойчивость системы:
-    \begin{displaymath}
-      g_0(\Theta)=\min_{j}\re(\lambda_j(A+B_u\Theta)) < 0
-    \end{displaymath}
-
-    Многокритериальная задача сводится к скалярной методом главного критерия.
-
-\end{frame}
+%\begin{frame}
+%\frametitle{Адаптивная оценка константы Гёльдера}
+%  Вместо общей оценки \(M\) для каждого интервала вычисляется своя оценка \(M_i\):
+%  \begin{displaymath}
+%    \begin{array}{c}
+%      H_i=\frac{|z_i-z_{i-1}|}{\Delta_i} \\
+%      \lambda_i=\max\{H_{i-1},H_i,H_{i+1}\} \\
+%      H^k=\max\{H_i:i=2,\dots ,k\} \\
+%      \gamma_i=H^k\frac{\Delta_i}{\Delta^{max}} \\
+%      \Delta^{max}=\max\{\Delta_{i}:i=2,\dots ,k\}
+%    \end{array}
+%  \end{displaymath}
+%
+%  \begin{displaymath}
+%    M_i=r\cdot \max\{H_i, \frac{1}{2}(\lambda_i+\gamma_i),\xi\}
+%  \end{displaymath}
+%
+%  \begin{displaymath}
+%    \overline{M_i}=r\cdot \max\{H_i, \frac{\lambda_i}{r}+\frac{r-1}{r}\gamma_i,\xi\}
+%  \end{displaymath}
+%\end{frame}
+%
+%\begin{frame}
+%\frametitle{Адаптивная оценка константы Гёльдера}
+%\begin{columns}
+%  \begin{column}{0.5\textwidth}
+%    \begin{figure}[ht]
+%      \centerline{\includegraphics[width=1.1\textwidth]{gkls-s.pdf}}
+%    \caption*{GKLS Simple 2d}
+%    \end{figure}
+%  \end{column}
+%  \begin{column}{0.5\textwidth}
+%    \begin{figure}[ht]
+%    \centerline{\includegraphics[width=1.1\textwidth]{grishagin.pdf}}
+%    \caption*{\(F_{GR}\)}
+%    \end{figure}
+%  \end{column}
+%\end{columns}
+%
+%\end{frame}
 
 \begin{frame}
   \frametitle{Пример прикладной задачи}
